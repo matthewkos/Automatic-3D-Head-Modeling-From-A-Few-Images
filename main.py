@@ -34,8 +34,8 @@ if __name__ == '__main__':
     print("time={:.2f}".format(time() - start_time))
     """END"""
 
-    # path = input("Path of image: ")
-    path = INPUT_DATA
+    path = input("Path of image: ")
+    # path = INPUT_DATA
     path = os.path.join(DIR_INPUT, path)
     assert os.path.exists(path)
 
