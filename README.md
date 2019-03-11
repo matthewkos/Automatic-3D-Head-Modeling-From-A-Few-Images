@@ -9,12 +9,10 @@ NA
 
 ## Dependencies
 
-* Anaconda
 * Python 3.6.8
-As state in requirment.txt
 * numpy
 * opencv-contrib-python
-* tensorflow-gpu
+* tensorflow-gpu==1.10.0
 * scipy
 * skimage
 * mtcnn
