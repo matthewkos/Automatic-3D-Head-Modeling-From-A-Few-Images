@@ -2,5 +2,5 @@ numpy
 opencv-contrib-python
 tensorflow-gpu
 scipy
-skimage
+scikit-image
 mtcnn

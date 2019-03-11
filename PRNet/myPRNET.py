@@ -13,6 +13,7 @@ from .utils.render_app import get_visibility, get_uv_mask
 from .utils.write import write_obj_with_colors, write_obj_with_texture
 import cv2
 
+
 # def main(args):
 #     start_time = time()
 #     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu # GPU number, -1 for CPU
@@ -78,13 +79,14 @@ import cv2
 #     end_time = time()
 #     print("Time Elasped {}".format(end_time-start_time))
 
-def genPRMask(image_path, save_folder='temp', isMTCNN=True, isFront=True, isTexture=True, isMask=True, isKpt=False, isCrop=True, texture_size=256):
+def genPRMask(image_path, save_folder='temp', isMTCNN=True, isFront=True, isTexture=True, isMask=True, isKpt=False,
+              isCrop=True, texture_size=256):
     start_time = time()
     # os.environ['CUDA_VISIBLE_DEVICES'] = 0
     if not os.path.exists(save_folder):
         os.mkdir(save_folder)
 
-    prn = PRN(is_mtcnn = isMTCNN)
+    prn = PRN(is_mtcnn=isMTCNN)
     name = image_path.strip().split('/')[-1][:-4]
     # read image
     try:
@@ -144,7 +146,7 @@ def genPRMask(image_path, save_folder='temp', isMTCNN=True, isFront=True, isText
         print(e)
         raise e
     return {"obj": os.path.join(save_folder, name + '.obj'), "mtl": os.path.join(save_folder, name + '.mtl'),
-        "texture": os.path.join(save_folder, name + '_texture.png')}
+            "texture": os.path.join(save_folder, name + '_texture.png')}
 
 # if __name__ == '__main__':
 #     parser = argparse.ArgumentParser(description='Joint 3D Face Reconstruction and Dense Alignment with Position Map Regression Network')

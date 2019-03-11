@@ -112,7 +112,7 @@ def bg_remove(img, out=None):
 
     if out:
         cv2.imwrite(out, masked)
-    display(img,"masked")
+    display(img, "masked")
     return masked
 
 
@@ -135,4 +135,3 @@ if __name__ == "__main__":
     bg_remove(cv2.imread(path))
     # img = crop(img, *points_box)
     # display(img)
-

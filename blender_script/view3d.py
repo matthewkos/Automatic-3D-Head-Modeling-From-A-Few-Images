@@ -29,7 +29,6 @@ bl_info = {
     'tracker_url': '',
     'category': '3D View'}
 
-
 """
 Display the indices of vertices, edges and faces in the 3d-view.
 
@@ -61,8 +60,8 @@ def generate_points(width, height):
 
     width += 2
     height += 4
-    width = ((width/2) - amp) + 2
-    height -= (2*amp)
+    width = ((width / 2) - amp) + 2
+    height -= (2 * amp)
 
     pos_list, final_list = [], []
 
@@ -75,7 +74,7 @@ def generate_points(width, height):
         pos_list.append([x, -y])
 
     w_list, h_list = [1, -1, -1, 1], [-1, -1, 1, 1]
-    slice_list = [[i, i+4] for i in range(0, n_points, 3)]
+    slice_list = [[i, i + 4] for i in range(0, n_points, 3)]
 
     for idx, (start, end) in enumerate(slice_list):
         point_array = pos_list[start:end]
@@ -128,7 +127,7 @@ def draw_callback_px(self, context):
         bgl.glColor4f(0.103, 0.2, 0.2, 0.2)
         bgl.glBegin(bgl.GL_POLYGON)
         for pointx, pointy in polyline:
-            bgl.glVertex2f(pointx+x, pointy+y)
+            bgl.glVertex2f(pointx + x, pointy + y)
         bgl.glEnd()
 
         ''' draw text '''
@@ -227,14 +226,14 @@ def menu_func(self, context):
     row = col.row(align=True)
     row.active = context.mode == "EDIT_MESH" and scn.display_indices == 1
     row.prop(context.scene, "display_sel_only")
-    #row.prop(context.scene, "live_mode")
+    # row.prop(context.scene, "live_mode")
 
 
 def register_properties():
     bpy.types.Scene.display_indices = bpy.props.IntProperty(
         name="Display indices",
         default=0)
-    #context.scene.display_indices = 0
+    # context.scene.display_indices = 0
     bpy.types.Scene.display_sel_only = bpy.props.BoolProperty(
         name="Selected only",
         description="Only display indices of selected vertices/edges/faces",

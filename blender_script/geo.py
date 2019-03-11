@@ -7,14 +7,15 @@ from math import radians
 from os.path import exists
 import struct
 import json
+
 """
 DEFINE CONSTANT
 """
 
-with open('./config.ini','r') as json_file:
-	json_data = json.load(json_file)
-	for (k,v) in json_data.items():
-		exec("{} = {}".format(k,v))
+with open('./config.ini', 'r') as json_file:
+    json_data = json.load(json_file)
+    for (k, v) in json_data.items():
+        exec("{} = {}".format(k, v))
 
 """
 Basic
@@ -97,6 +98,7 @@ def objectMode(obj):
     o = select(obj)
     bpy.ops.object.mode_set(mode='OBJECT')
     return o
+
 
 def editMode(obj):
     """
@@ -211,7 +213,7 @@ def headUV(file):
     if bpy.data.images.get('uv_map') is not None:
         bpy.data.images.remove(bpy.data.images['uv_map'])
     bpy.context.scene.objects.active = bpy.data.objects['Head']
-    img = bpy.ops.image.open(filepath=cwd()+r"\\"+file)
+    img = bpy.ops.image.open(filepath=cwd() + r"\\" + file)
     bpy.data.images[file].name = "uv_map"
     img = bpy.data.images.get('uv_map')
     bpy.context.scene.objects.active = bpy.data.objects['Head']
@@ -228,9 +230,9 @@ def headUV(file):
         # no slots
         bpy.data.objects['Head'].data.materials.append(mat)
     mat.use_nodes = True
-    #bpy.ops.cycles.use_shading_nodes()
+    # bpy.ops.cycles.use_shading_nodes()
     matnodes = mat.node_tree.nodes
-    texture=matnodes.new("ShaderNodeTexImage")
+    texture = matnodes.new("ShaderNodeTexImage")
     texture.image = img
     disp = matnodes['Diffuse BSDF'].inputs[0]
     mat.node_tree.links.new(disp, texture.outputs[0])
@@ -378,12 +380,13 @@ def AlignHeadHair():
     move(0, 0, -0.2)
     return
 
+
 def modiftHair():
     select('Hair')
     bpy.ops.object.modifier_add(type='SOLIDIFY')
     bpy.context.object.modifiers["Solidify"].thickness_clamp = 2
     bpy.context.object.modifiers["Solidify"].offset = 0
-    bpy.context.object.modifiers["Solidify"].thickness = 0.001 # 0.001-0.003
+    bpy.context.object.modifiers["Solidify"].thickness = 0.001  # 0.001-0.003
     bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Solidify")
     bpy.ops.object.modifier_add(type='SOLIDIFY')
     bpy.context.object.modifiers["Solidify"].thickness_clamp = 0
@@ -391,6 +394,7 @@ def modiftHair():
     bpy.context.object.modifiers["Solidify"].thickness = 0.0005
     bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Solidify")
     return
+
 
 def colorHair():
     select('Hair')
@@ -400,7 +404,7 @@ def colorHair():
     if mat is None:
         # create material
         mat = bpy.data.materials.new(name="Material")
-    
+
     # Assign it to object
     if bpy.data.objects['Hair'].data.materials:
         # assign to 1st material slot
@@ -409,22 +413,24 @@ def colorHair():
         # no slots
         bpy.data.objects['Hair'].data.materials.append(mat)
     mat.use_nodes = True
-    #bpy.ops.cycles.use_shading_nodes()
+    # bpy.ops.cycles.use_shading_nodes()
     matnodes = mat.node_tree.nodes
     matnodes.remove(matnodes['Diffuse BSDF'])
-    
-    texture=matnodes.new("ShaderNodeBsdfHair")
+
+    texture = matnodes.new("ShaderNodeBsdfHair")
     matnodes["Hair BSDF"].inputs[0].default_value = (0, 0, 0, 1)
     mat.node_tree.links.new(matnodes["Material Output"].inputs[0], texture.outputs[0])
     mat.node_tree.links.new(matnodes["Material Output"].inputs[1], texture.outputs[0])
     mat.node_tree.links.new(matnodes["Material Output"].inputs[2], texture.outputs[0])
     return
 
+
 def removeHair():
     hair = select('Hair')
     if hair is not None:
         bpy.ops.object.delete()
     return
+
 
 def importHair(file):
     if exists(file):
@@ -434,20 +440,20 @@ def importHair(file):
             bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
     else:
         raise Exception('File not found')
-        
+
 
 if __name__ == '__main__':
     """
     Head
     """
     applyHeadSub()
-    headUV(os.path.join(DIR_TEXTURE,TEXTURE_DATA))
-    
+    headUV(os.path.join(DIR_TEXTURE, TEXTURE_DATA))
+
     """
     Face
     """
     if select('Face') is None:
-        import_obj(file_loc=os.path.join(DIR_MASK,MASK_DATA), name='Face')
+        import_obj(file_loc=os.path.join(DIR_MASK, MASK_DATA), name='Face')
         select('Face')
         modify_face()
 
@@ -468,12 +474,12 @@ if __name__ == '__main__':
     move(*list(diff))
 
     # from input photo
-    
+
     # hair
     removeHair()
-    importHair(os.path.join(DIR_HAIR,HAIR_DATA))
+    importHair(os.path.join(DIR_HAIR, HAIR_DATA))
     ratio = AlignHeadHair()
     modiftHair()
-    #colorHair()
-    
+    # colorHair()
+
     objectMode('Head')
