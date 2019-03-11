@@ -87,7 +87,7 @@ def genPRMask(image_path, save_folder='temp', isMTCNN=True, isFront=True, isText
         os.mkdir(save_folder)
 
     prn = PRN(is_mtcnn=isMTCNN)
-    name = image_path.strip().split('/')[-1][:-4]
+    name = image_path.strip().split('\\')[-1][:-4]
     # read image
     try:
         image = imread(image_path)

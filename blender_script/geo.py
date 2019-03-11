@@ -1,18 +1,20 @@
 import bpy
 import bmesh
-from os import getcwd as cwd
+from os import chdir, getcwd
+from os.path import exists, join
+import os
 from collections.abc import Iterable
 import numpy as np
 from math import radians
-from os.path import exists
 import struct
 import json
+import argparse
 
 """
 DEFINE CONSTANT
 """
 
-with open('./config.ini', 'r') as json_file:
+with open('.\config.ini', 'r') as json_file:
     json_data = json.load(json_file)
     for (k, v) in json_data.items():
         exec("{} = {}".format(k, v))
@@ -86,7 +88,7 @@ def toabscoord(v, mat):
             l.append(mat * i)
         return type(v)(l)
     else:
-        return mat * i
+        return mat * v
 
 
 def objectMode(obj):
@@ -213,8 +215,8 @@ def headUV(file):
     if bpy.data.images.get('uv_map') is not None:
         bpy.data.images.remove(bpy.data.images['uv_map'])
     bpy.context.scene.objects.active = bpy.data.objects['Head']
-    img = bpy.ops.image.open(filepath=cwd() + r"\\" + file)
-    bpy.data.images[file].name = "uv_map"
+    img = bpy.ops.image.open(filepath=join(getcwd(),file))
+    bpy.data.images[os.path.split(file)[-1]].name = "uv_map"
     img = bpy.data.images.get('uv_map')
     bpy.context.scene.objects.active = bpy.data.objects['Head']
     # Get material
@@ -378,21 +380,35 @@ def AlignHeadHair():
     objectMode('Hair')
     move(*list(diff))
     move(0, 0, -0.2)
+    scale(1.1,1.1,1.1)
+    move(0,0,-50)
     return
 
 
 def modiftHair():
-    select('Hair')
+    # select('Hair')
+    editMode('Hair')
+    bpy.ops.mesh.select_all(action='TOGGLE')
+    bpy.ops.mesh.remove_doubles()
+    objectMode('Hair')
+
+    bpy.ops.object.modifier_add(type='DECIMATE')
+    bpy.context.object.modifiers["Decimate"].ratio = 0.5
+    bpy.context.object.modifiers["Decimate"].use_collapse_triangulate = True
+    bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Decimate")
+
     bpy.ops.object.modifier_add(type='SOLIDIFY')
     bpy.context.object.modifiers["Solidify"].thickness_clamp = 2
     bpy.context.object.modifiers["Solidify"].offset = 0
-    bpy.context.object.modifiers["Solidify"].thickness = 0.001  # 0.001-0.003
+    bpy.context.object.modifiers["Solidify"].thickness = 1  # 0.001-0.003
+    bpy.context.object.modifiers["Solidify"].use_rim = False
     bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Solidify")
-    bpy.ops.object.modifier_add(type='SOLIDIFY')
-    bpy.context.object.modifiers["Solidify"].thickness_clamp = 0
-    bpy.context.object.modifiers["Solidify"].offset = 0
-    bpy.context.object.modifiers["Solidify"].thickness = 0.0005
-    bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Solidify")
+
+    bpy.ops.object.modifier_add(type='DECIMATE')
+    bpy.context.object.modifiers["Decimate"].ratio = 0.5
+    bpy.context.object.modifiers["Decimate"].use_collapse_triangulate = True
+    bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Decimate")
+
     return
 
 
@@ -441,19 +457,45 @@ def importHair(file):
     else:
         raise Exception('File not found')
 
+def output(file_name):
+    bpy.ops.export_scene.obj(filepath=file_name, check_existing=False, keep_vertex_order=True)
+
 
 if __name__ == '__main__':
+
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument("texture", help="texture file name (,jpg/,png)")
+    # parser.add_argument("mask", help="mask file name (.obj)")
+    # parser.add_argument("hair", help="hair file name (.data)")
+    # parser.add_argument("out", help="output file name (,obj)")
+    # parser.add_argument("--hair-test", default="Data\\hair\\head_model.obj", help="")
+    # parser.add_argument("--dir-texture",'-t', default="Data\\texture", help="")
+    # parser.add_argument("--dir-mask", '-m', default="Data\\mask", help="")
+    # parser.add_argument("--dir-hair", '-H', default="Data\\hair", help="")
+    # parser.add_argument("--dir-out", '-o', default="output", help="")
+    #
+    # args = parser.parse_args()
+    # OBJ_HEAD_MODEL_HAIR = args.hair_test
+    # TEXTURE_DATA = args.texture
+    # MASK_DATA = args.mask
+    # HAIR_DATA = args.hair
+    # OUT_DATA = args.out
+    # DIR_TEXTURE = args.dir_texture
+    # DIR_MASK = args.dir_mask
+    # DIR_HAIR = args.dir_hair
+    # DIR_OUT = args.dir_out
+
     """
     Head
     """
     applyHeadSub()
-    headUV(os.path.join(DIR_TEXTURE, TEXTURE_DATA))
+    headUV(join(DIR_TEXTURE, TEXTURE_DATA))
 
     """
     Face
     """
     if select('Face') is None:
-        import_obj(file_loc=os.path.join(DIR_MASK, MASK_DATA), name='Face')
+        import_obj(file_loc=join(DIR_MASK, MASK_DATA), name='Face')
         select('Face')
         modify_face()
 
@@ -477,9 +519,9 @@ if __name__ == '__main__':
 
     # hair
     removeHair()
-    importHair(os.path.join(DIR_HAIR, HAIR_DATA))
-    ratio = AlignHeadHair()
+    importHair(join(DIR_HAIR, HAIR_DATA))
+    AlignHeadHair()
     modiftHair()
     # colorHair()
-
-    objectMode('Head')
+    objectMode('Hair')
+    output(join(DIR_OUT,OUT_DATA))
