@@ -46,3 +46,11 @@ Download [link](http://www-scf.usc.edu/~liwenhu/SHM/database.html), unzip and pu
 
 Download [link](https://drive.google.com/file/d/1UoE-XuW1SDLUjZmJPkIZ1MLxvQFgmTFH/view?usp=sharing), unzip into ./PRNet/Data/net-data)
 
+## Usage
+
+put input image (.jpg) under .\Data\input
+
+```
+python main.py
+```
+input only the filename (e.g. 0.jpg)
