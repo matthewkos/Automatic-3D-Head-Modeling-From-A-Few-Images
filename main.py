@@ -20,6 +20,7 @@ def time_it_wrapper(callback, name="", args=(), kwargs={}):
 
 
 if __name__ == '__main__':
+    global_start = time()
     """Import constants from config file"""
     with open('config.ini', 'r') as json_file:
         json_data = json.load(json_file)
@@ -46,3 +47,4 @@ if __name__ == '__main__':
         blender_wrapper(".\\Head_geometry.blend", ".\\blender_script\\geo.py", INPUT_DATA, TEXTURE_DATA, HAIR_DATA,
                         MASK_DATA, OUT_DATA),
         "Alignment and Export")
+    print("Global_time: {:.2f}".format(time() - global_start))

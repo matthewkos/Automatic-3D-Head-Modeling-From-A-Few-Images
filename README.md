@@ -9,13 +9,17 @@ NA
 
 ## Dependencies
 
-* Python 3.6.8
+* Python==3.6.8
 * numpy
 * opencv-contrib-python
 * tensorflow-gpu==1.10.0
 * scipy
-* skimage
+* scikit-image
 * mtcnn
+* pyglet
+* PyWavefront
+* Pillow
+* PySimpleGUI
 
 ```
 pip install -r requirment.txt
@@ -52,3 +56,8 @@ put input image (.jpg) under .\Data\input
 python main.py
 ```
 input only the filename (e.g. 0.jpg)
+
+## Display UI
+
+-
+

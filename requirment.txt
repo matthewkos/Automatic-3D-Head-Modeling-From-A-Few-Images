@@ -4,3 +4,7 @@ tensorflow-gpu==1.10.0
 scipy
 scikit-image
 mtcnn
+pyglet
+PyWavefront
+Pillow
+PySimpleGUI
