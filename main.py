@@ -31,8 +31,7 @@ if __name__ == '__main__':
     print("Importing packages: ", end="")
     start_time = time()
     from PRNet.myPRNET import genPRMask
-
-    print("time={:.2f}".format(time() - start_time))
+    print("time={:.2f}s".format(time() - start_time))
     """END"""
 
     path = input("Path of image: ")

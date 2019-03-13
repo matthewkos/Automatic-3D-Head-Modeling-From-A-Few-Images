@@ -30,9 +30,12 @@ if __name__ == '__main__':
         [sg.Text('2D Frontal Image ', size=(15, 1)),
          sg.InputText('C:\\Users\\KTL\\Desktop\\FYP-code\\Data\\input\\0.jpg', key='_IMG_PATH_'), sg.FileBrowse()],
         [sg.Button('Show Image')],
+        [sg.Text('')],
+        [sg.Button('Generate')],
+        [sg.Text('')],
         [sg.Text('Output 3D Head Obj Path:'), sg.Text('', key='_OBJ_PATH_DISPLAY_', size=(45, 1))],
         [sg.Text('3D Head WaveFront ', size=(15, 1)), sg.InputText('C:\\Users\\KTL\\Desktop\\FYP-code\\output', key='_OBJ_PATH_'), sg.FileBrowse()],
-        [sg.Button('Generate')],
+        [sg.Button('Show 3D model')],
         [sg.Text('', key='_ERROR_MSG_', size=(75,2),text_color='#FF0000')],
         [sg.Button('Exit')]
     ]
@@ -40,8 +43,8 @@ if __name__ == '__main__':
     window_main = sg.Window('Automatic Head Modelling').Layout(layout)
     imageViewer_active = False
 
-    current_img_path = ''
-    current_obj_path = ''
+    # current_img_path = ''
+    # current_obj_path = ''
     while True:  # Event Loop
         event, values = window_main.Read()
         print(event, values)
@@ -75,15 +78,21 @@ if __name__ == '__main__':
                     errmsg = errmsg[:100] +"\n" + errmsg[100:]
                 window_main.FindElement('_ERROR_MSG_').Update(errmsg)
         elif event == 'Generate':
+            # print(event)
+            pass
+            img_path = values['_IMG_PATH_'] if values['_IMG_PATH_'] != '' else current_img_path
+            # main.gen(img_path)
+        elif event == 'Show 3D model':
             try:
                 current_obj_path = values['_OBJ_PATH_'] if values['_OBJ_PATH_'] != '' else current_obj_path
                 window_main.FindElement('_OBJ_PATH_DISPLAY_').Update(current_obj_path)
-                ### RUN_HERE
-                if os.path.isfile(current_obj_path):
+                if not os.path.exists(current_img_path):
                     window = MeshViewer(current_obj_path)
                     pyglet.clock.schedule(window.update)
                     pyglet.app.run()
                     window.show_window()
+                else:
+                    raise ValueError('Invalid Path')
             except Exception as err:
                 errmsg = str(err)
                 if len(errmsg) > 100:

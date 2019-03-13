@@ -14,11 +14,6 @@ import argparse
 DEFINE CONSTANT
 """
 
-with open('.\config.ini', 'r') as json_file:
-    json_data = json.load(json_file)
-    for (k, v) in json_data.items():
-        exec("{} = {}".format(k, v))
-
 """
 Basic
 """
@@ -462,6 +457,11 @@ def output(file_name):
 
 
 if __name__ == '__main__':
+
+    with open('.\config.ini', 'r') as json_file:
+        json_data = json.load(json_file)
+        for (k, v) in json_data.items():
+            exec("{} = {}".format(k, v))
 
     # parser = argparse.ArgumentParser()
     # parser.add_argument("texture", help="texture file name (,jpg/,png)")
