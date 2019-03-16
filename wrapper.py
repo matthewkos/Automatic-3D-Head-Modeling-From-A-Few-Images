@@ -42,7 +42,6 @@ def blender_wrapper(blender_file, script_file_path, input_data,texture,hair,mask
 
 if __name__ == "__main__":
     import argparse
-
     parser = argparse.ArgumentParser()
     parser.add_argument("script_file_path", help="the blender script path")
     args = parser.parse_args()

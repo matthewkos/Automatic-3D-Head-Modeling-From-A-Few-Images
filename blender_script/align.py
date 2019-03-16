@@ -263,8 +263,16 @@ def align_face(MASK_DATA='0.obj'):
     """
     FACE_COUNT = 43866  # the number of vertex in face mask
     # DIR_MASK = 'C:\\Users\\KTL\\Desktop\\FYP-code\\Data\\mask'
+    if not os.path.exists(".\\config.ini"):
+        raise FileNotFoundError("config.ini")
+    with open('.\\config.ini', 'r') as json_file:
+        json_data = json.load(json_file)
+        for (k, v) in json_data.items():
+            exec("{} = {}".format(k, v))
+        print('wer')
+
     kpt_ind, left_ind, fore_ind, jaw_ind, ind_bound, neck_ind = get_kpts()
-    objectMode('head')
+    objectMode('Head')
     import_obj(os.path.join(DIR_MASK, MASK_DATA), 'Object')
     bpy.context.scene.objects.active = None
     """

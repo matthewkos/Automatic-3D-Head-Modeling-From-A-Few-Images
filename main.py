@@ -43,7 +43,7 @@ if __name__ == '__main__':
     time_it_wrapper(None, "Generating Texture")
     time_it_wrapper(genPRMask, "Generating Mask", (path, DIR_MASK))
     time_it_wrapper(
-        blender_wrapper(".\\Head_geometry.blend", ".\\blender_script\\geo.py", INPUT_DATA, TEXTURE_DATA, HAIR_DATA,
+        blender_wrapper(".\\geometry.blend", ".\\blender_script\\geo.py", INPUT_DATA, TEXTURE_DATA, HAIR_DATA,
                         MASK_DATA, OUT_DATA),
         "Alignment and Export")
     print("Global_time: {:.2f}".format(time() - global_start))
