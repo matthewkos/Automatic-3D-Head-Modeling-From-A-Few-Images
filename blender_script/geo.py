@@ -711,14 +711,6 @@ if __name__ == '__main__':
     if select('Face') is None:
         align = HeadMask_Align()
         align.align_face(MASK_DATA)
-        # Matrix.identity(bpy.data.objects['Face'].matrix_basis)
-        # Matrix.identity(bpy.data.objects['Head'].matrix_basis)
-        # edit_mode('Face')
-        # bpy.ops.mesh.select_all(action='SELECT')
-        # bpy.ops.transform.rotate(value=1.5708, axis=(1, 0, 0), constraint_axis=(True, False, False), constraint_orientation='GLOBAL', mirror=False, proportional='CONNECTED', proportional_edit_falloff='SMOOTH', proportional_size=1)
-        # edit_mode('Head')
-        # bpy.ops.mesh.select_all(action='SELECT')
-        # bpy.ops.transform.rotate(value=1.5708, axis=(1, 0, 0), constraint_axis=(True, False, False), constraint_orientation='GLOBAL', mirror=False, proportional='CONNECTED', proportional_edit_falloff='SMOOTH', proportional_size=1)
         modify_face()
 
     """
