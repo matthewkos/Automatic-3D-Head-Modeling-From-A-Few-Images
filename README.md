@@ -5,7 +5,7 @@ Cheung Yik Kin, Koo Tin Lok , Or Ka Po - Hong Kong University of Science and Tec
 ELEC4900 SB3-18 | COMP4901 MXJ3
 
 ## Version log
-NA - 
+NA
 
 ## Dependencies
 
