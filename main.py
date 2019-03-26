@@ -4,6 +4,7 @@ import os
 import subprocess
 from DataHelper import ConfigManager
 
+
 def blender_wrapper(blender_file, script_file_path, input_data, texture, hair, mask, output):
     # LOAD CONFIG FILE
     configManager = ConfigManager('.\\config.ini')
@@ -90,12 +91,8 @@ if __name__ == '__main__':
     time_it_wrapper(None, "Generating Geometry")
     time_it_wrapper(None, "Generating Texture")
     mask_data = time_it_wrapper(genPRMask, "Generating Mask", (path, DIR_MASK))
-    # MASK_DATA = mask_data['obj']
-# time_it_wrapper(
-#     blender_wrapper(".\\geometry.blend", ".\\blender_script\\geo.py", INPUT_DATA, TEXTURE_DATA, HAIR_DATA,
-#                     MASK_DATA, OUT_DATA),
-#     "Alignment and Export")
-time_it_wrapper(blender_wrapper, "Alignment",
-                args=(".\\geometry.blend", ".\\blender_script\\geo.py", INPUT_DATA, TEXTURE_DATA, HAIR_DATA,
-                      MASK_DATA, OUT_DATA))
-print("Total_time: {:.2f}".format(time() - global_start))
+    time_it_wrapper(blender_wrapper, "Alignment",
+                    args=(".\\geometry.blend", ".\\blender_script\\geo.py", INPUT_DATA, TEXTURE_DATA, HAIR_DATA,
+                          MASK_DATA, OUT_DATA))
+    print("Total_time: {:.2f}".format(time() - global_start))
+    print("Output to: {}".format(os.path.join(DIR_OUT, OUT_DATA)))
