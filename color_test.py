@@ -246,8 +246,8 @@ def edge_detection(img, th=10):
     return grad, edge_along_y, edge_along_x
 
 
-def is_black(color: np.array):
-    return np.sum(color) <= 20
+def is_black(color: np.array, th=10):
+    return np.sum(color) <= th
 
 
 def find_ref_pts(img, pt, k=3, d=2, valid=is_black):

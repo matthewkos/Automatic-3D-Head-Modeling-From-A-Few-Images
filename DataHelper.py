@@ -1,27 +1,28 @@
 import os
 import json
 
+
 class ConfigManager(object):
 
-    def __init__(self, configFilePath):
+    def __init__(self, configFilePath='.\\config.ini'):
         self.configFilePath = configFilePath
         if not os.path.exists(self.configFilePath):
             # Default config.ini path
             self.configFilePath = '.\\config.ini'
-    
+
     def addOne(self, key, value):
         with open(self.configFilePath, 'r') as json_file:
             config = json.load(json_file)
             config[key] = value
         with open(self.configFilePath, "w") as json_file:
             json.dump(config, json_file, indent=4)
-    
+
     def getOne(self, key):
         with open(self.configFilePath, 'r') as json_file:
             config = json.load(json_file)
             value = config[key]
         return value
-    
+
     def addPairs(self, keyAndValue):
         with open(self.configFilePath, 'r') as json_file:
             config = json.load(json_file)
