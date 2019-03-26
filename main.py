@@ -81,6 +81,7 @@ if __name__ == '__main__':
     print("Importing packages: ")
     start_time = time()
     from PRNet.myPRNET import genPRMask
+
     print("\ttime={:.2f}s".format(time() - start_time))
     """END"""
 
@@ -92,12 +93,12 @@ if __name__ == '__main__':
     time_it_wrapper(None, "Generating Geometry")
     time_it_wrapper(None, "Generating Texture")
     mask_data = time_it_wrapper(genPRMask, "Generating Mask", (path, DIR_MASK))
-	MASK_DATA = mask_data['obj']
-    # time_it_wrapper(
-    #     blender_wrapper(".\\geometry.blend", ".\\blender_script\\geo.py", INPUT_DATA, TEXTURE_DATA, HAIR_DATA,
-    #                     MASK_DATA, OUT_DATA),
-    #     "Alignment and Export")
-    time_it_wrapper(blender_wrapper, "Alignment",
-                    args=(".\\geometry.blend", ".\\blender_script\\geo.py", INPUT_DATA, TEXTURE_DATA, HAIR_DATA,
-                          MASK_DATA, OUT_DATA))
-    print("Total_time: {:.2f}".format(time() - global_start))
+    # MASK_DATA = mask_data['obj']
+# time_it_wrapper(
+#     blender_wrapper(".\\geometry.blend", ".\\blender_script\\geo.py", INPUT_DATA, TEXTURE_DATA, HAIR_DATA,
+#                     MASK_DATA, OUT_DATA),
+#     "Alignment and Export")
+time_it_wrapper(blender_wrapper, "Alignment",
+                args=(".\\geometry.blend", ".\\blender_script\\geo.py", INPUT_DATA, TEXTURE_DATA, HAIR_DATA,
+                      MASK_DATA, OUT_DATA))
+print("Total_time: {:.2f}".format(time() - global_start))
