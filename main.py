@@ -1,20 +1,19 @@
 from time import time
 import warnings
 import os
-import json
 import subprocess
-
+from ConfigManager import ConfigManager
 
 def blender_wrapper(blender_file, script_file_path, input_data, texture, hair, mask, output):
     # LOAD CONFIG FILE
-    with open('.\config.ini', 'r') as json_file:
-        config = json.load(json_file)
-    config['INPUT_DATA'] = input_data
-    config['TEXTURE_DATA'] = texture
-    config['HAIR_DATA'] = hair
-    config['MASK_DATA'] = mask
-    config['OUT_DATA'] = output
-    json.dump(config, open('.\config.ini', 'w'))
+    configManager = ConfigManager('.\\config.ini')
+    keyAndValue = {}
+    keyAndValue['INPUT_DATA'] = input_data
+    keyAndValue['TEXTURE_DATA'] = texture
+    keyAndValue['HAIR_DATA'] = hair
+    keyAndValue['MASK_DATA'] = mask
+    keyAndValue['OUT_DATA'] = output
+    configManager.addPairs(keyAndValue)
     # SAVE CONFIG FILE
 
     blender = r".\\Blender\\blender.exe"
@@ -58,23 +57,21 @@ def time_it_wrapper(callback, name="", args=(), kwargs={}):
 if __name__ == '__main__':
     global_start = time()
     """Import constants from config file"""
-    with open('.\config.ini', 'r') as json_file:
-        json_data = json.load(json_file)
-        # for (k, v) in json_data.items():
-        #     exec("{} = {}".format(k, v))
-        OBJ_HEAD_MODEL_HAIR = json_data["OBJ_HEAD_MODEL_HAIR"]
-        DIR_INPUT = json_data["DIR_INPUT"]
-        DIR_TEXTURE = json_data["DIR_TEXTURE"]
-        DIR_HAIR = json_data["DIR_HAIR"]
-        DIR_MASK = json_data["DIR_MASK"]
-        DIR_OUT = json_data["DIR_OUT"]
-        DIR_KPTS = json_data["DIR_KPTS"]
-        INPUT_DATA = json_data["INPUT_DATA"]
-        TEXTURE_DATA = json_data["TEXTURE_DATA"]
-        HAIR_DATA = json_data["HAIR_DATA"]
-        MASK_DATA = json_data["MASK_DATA"]
-        OUT_DATA = json_data["OUT_DATA"]
-        del json_data
+    configManager = ConfigManager('.\\config.ini')
+    json_data = configManager.getAll()
+    OBJ_HEAD_MODEL_HAIR = json_data["OBJ_HEAD_MODEL_HAIR"]
+    DIR_INPUT = json_data["DIR_INPUT"]
+    DIR_TEXTURE = json_data["DIR_TEXTURE"]
+    DIR_HAIR = json_data["DIR_HAIR"]
+    DIR_MASK = json_data["DIR_MASK"]
+    DIR_OUT = json_data["DIR_OUT"]
+    DIR_KPTS = json_data["DIR_KPTS"]
+    INPUT_DATA = json_data["INPUT_DATA"]
+    TEXTURE_DATA = json_data["TEXTURE_DATA"]
+    HAIR_DATA = json_data["HAIR_DATA"]
+    MASK_DATA = json_data["MASK_DATA"]
+    OUT_DATA = json_data["OUT_DATA"]
+    del json_data
 
     """Setup"""
     warnings.filterwarnings("ignore")
