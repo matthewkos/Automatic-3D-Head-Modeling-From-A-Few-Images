@@ -11,7 +11,7 @@ NA
 
 * Python==3.6.8
 * numpy
-* opencv-contrib-python
+* opencv-contrib-python==3.4.5.20
 * tensorflow-gpu==1.10.0
 * scipy
 * scikit-image

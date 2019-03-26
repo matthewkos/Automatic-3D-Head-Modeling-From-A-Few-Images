@@ -729,4 +729,4 @@ if __name__ == '__main__':
         color_hair()
         object_mode('Hair')
 
-    # output(os.path.join(DIR_OUT, OUT_DATA))
+    output(os.path.join(DIR_OUT, OUT_DATA))

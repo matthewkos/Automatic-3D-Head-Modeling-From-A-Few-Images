@@ -1,6 +1,4 @@
-import subprocess
 import os
-import argparse
 import json
 import subprocess
 
@@ -8,11 +6,11 @@ def blender_wrapper(blender_file, script_file_path, input_data,texture,hair,mask
     # LOAD CONFIG FILE
     with open('.\config.ini', 'r') as json_file:
         config = json.load(json_file)
-    config['INPUT_DATA'] = "r'{}'".format(input_data)
-    config['TEXTURE_DATA'] = "r'{}'".format(texture)
-    config['HAIR_DATA'] = "r'{}'".format(hair)
-    config['MASK_DATA'] = "r'{}'".format(mask)
-    config['OUT_DATA'] = "r'{}'".format(output)
+    config['INPUT_DATA'] = input_data
+    config['TEXTURE_DATA'] = texture
+    config['HAIR_DATA'] = hair
+    config['MASK_DATA'] = mask
+    config['OUT_DATA'] = output
     json.dump(config, open('.\config.ini', 'w'))
     # SAVE CONFIG FILE
 
