@@ -5,7 +5,7 @@ from math import sqrt
 
 
 # def image_expansion(img, edges_along_y, edges_along_x, mode='xyi'):
-def image_expansion(img):
+def image_expansion(img, mode=""):
     # new_img = np.zeros_like(img, dtype=np.float32)
     new_img = img.copy().astype(np.float32)
     _, edges_along_y, edges_along_x = edge_detection(img, th=5)
@@ -36,15 +36,16 @@ def image_expansion(img):
                 lambda x: left_color[2] * (1 - x / length) + right_color[2] * (x / length), (length,))
 
             # internal
-            # length = _x1 - _x0
-            # left_color = new_img[_y, _x0, :]
-            # right_color = new_img[_y, _x1, :]
-            # new_img[_y, _x0:_x1, 0] = np.fromfunction(
-            #     lambda x: left_color[0] * (1 - x / length) + right_color[0] * (x / length), (length,))
-            # new_img[_y, _x0:_x1, 1] = np.fromfunction(
-            #     lambda x: left_color[1] * (1 - x / length) + right_color[1] * (x / length), (length,))
-            # new_img[_y, _x0:_x1, 2] = np.fromfunction(
-            #     lambda x: left_color[2] * (1 - x / length) + right_color[2] * (x / length), (length,))
+            if 'i' in mode:
+                length = _x1 - _x0
+                left_color = new_img[_y, _x0, :]
+                right_color = new_img[_y, _x1, :]
+                new_img[_y, _x0:_x1, 0] = np.fromfunction(
+                    lambda x: left_color[0] * (1 - x / length) + right_color[0] * (x / length), (length,))
+                new_img[_y, _x0:_x1, 1] = np.fromfunction(
+                    lambda x: left_color[1] * (1 - x / length) + right_color[1] * (x / length), (length,))
+                new_img[_y, _x0:_x1, 2] = np.fromfunction(
+                    lambda x: left_color[2] * (1 - x / length) + right_color[2] * (x / length), (length,))
     # end of x padding
     # _, _, edges_along_x = edge_detection(new_img, th=5)
     color = np.mean(img[img.shape[0] // 2, np.argwhere(edges_along_x[:, 0] > 0), :], axis=0)
@@ -144,5 +145,5 @@ if __name__ == '__main__':
     start_time = time()
     img = cv2.imread(r'Data\mask\0_texture.png')
     # edge_img, edge_along_y, edge_along_x = edge_detection(img, th=5)
-    new_img = image_expansion(img)
+    new_img = image_expansion(img,'i')
     display(new_img, "v4")

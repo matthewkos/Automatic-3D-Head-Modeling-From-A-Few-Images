@@ -216,9 +216,9 @@ def get_face_head_vert():
 
 def head_uv(file):
     # uv_unwrap
-    edit_mode('Head')
-    bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.uv.cylinder_project()
+    # edit_mode('Head')
+    # bpy.ops.mesh.select_all(action='SELECT')
+    # bpy.ops.uv.cylinder_project()
     select('Head')
     # create uv map
     if bpy.data.images.get('uv_map') is not None:
@@ -684,7 +684,7 @@ def import_hair(file):
 
 
 def output(file_name):
-    bpy.ops.export_scene.obj(filepath=file_name, check_existing=False, keep_vertex_order=True)
+    bpy.ops.export_scene.obj(filepath=file_name, check_existing=False, keep_vertex_order=True, global_scale=1)
 
 
 if __name__ == '__main__':

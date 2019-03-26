@@ -39,7 +39,7 @@ def edge_detection(img, th=10):
     return grad, edge_along_y, edge_along_x
 
 
-def image_expansion(img):
+def image_expansion(img, mode=''):
     # new_img = np.zeros_like(img, dtype=np.float32)
     new_img = img.copy().astype(np.float32)
     _, edges_along_y, edges_along_x = edge_detection(img, th=5)
@@ -69,22 +69,23 @@ def image_expansion(img):
             new_img[_y, _x1:, 2] = np.fromfunction(
                 lambda x: left_color[2] * (1 - x / length) + right_color[2] * (x / length), (length,))
             # internal
-            # length = _x1 - _x0
-            # left_color = new_img[_y, _x0, :]
-            # right_color = new_img[_y, _x1, :]
-            # new_img[_y, _x0:_x1, 0] = np.fromfunction(
-            #     lambda x: left_color[0] * (1 - x / length) + right_color[0] * (x / length), (length,))
-            # new_img[_y, _x0:_x1, 1] = np.fromfunction(
-            #     lambda x: left_color[1] * (1 - x / length) + right_color[1] * (x / length), (length,))
-            # new_img[_y, _x0:_x1, 2] = np.fromfunction(
-            #     lambda x: left_color[2] * (1 - x / length) + right_color[2] * (x / length), (length,))
+            if 'i' in mode:
+                length = _x1 - _x0
+                left_color = new_img[_y, _x0, :]
+                right_color = new_img[_y, _x1, :]
+                new_img[_y, _x0:_x1, 0] = np.fromfunction(
+                    lambda x: left_color[0] * (1 - x / length) + right_color[0] * (x / length), (length,))
+                new_img[_y, _x0:_x1, 1] = np.fromfunction(
+                    lambda x: left_color[1] * (1 - x / length) + right_color[1] * (x / length), (length,))
+                new_img[_y, _x0:_x1, 2] = np.fromfunction(
+                    lambda x: left_color[2] * (1 - x / length) + right_color[2] * (x / length), (length,))
     # end of x padding
     # _, _, edges_along_x = edge_detection(new_img, th=5)
     color = np.mean(img[img.shape[0] // 2, np.argwhere(edges_along_x[:, 0] > 0), :], axis=0)
     # for _x, (_y0, _y1) in enumerate(edges_along_x):
     _y0 = np.argwhere(edges_along_y[:, 0] > 0).min()
     _y1 = np.argwhere(edges_along_y[:, 0] > 0).max()
-    for _x in range(img.shape[0]):
+    for _x in range(img.shape[1]):
         if _y0 != 0 and _y1 != img.shape[0]:
             # appends edges
             new_img[0, _x, :] = new_img[-1, _x, :] = color
@@ -125,7 +126,10 @@ def image_expansion(img):
 
 def genText(img_path, output_path):
     img = cv2.imread(img_path)
-    img = image_expansion(img)
+    # 256 * 256 -> 1024*256
+    new_img = np.zeros((256, 512, 3), dtype=np.uint8)
+    new_img[:, (512-256)//2:(512+256)//2, :] = img
+    img = image_expansion(new_img, 'i')
     cv2.imwrite(output_path, img)
     return
 
@@ -177,6 +181,11 @@ def dist(pt1, pt2):
 
 
 def display(img, name="Img", time=0, encode="BGR"):
+    if type(img) != np.ndarray:
+        if type(img) == str:
+            img = cv2.imread(img)
+        else:
+            raise TypeError("Should be img (numpy.ndarray) or img path (str), but {} found".format(type(img)))
     if not isinstance(img, np.ndarray):
         img = cv2.imread(img)
         encode = "BGR"
@@ -227,13 +236,12 @@ def main():
 
     print("\ttime={:.2f}s".format(time() - start_time))
     """END"""
-    img_path = input("Path of image: ")
-    # path = INPUT_DATA
+    # img_path = input("Path of image: ")
+    img_path = INPUT_DATA
     json_data['INPUT_DATA'] = img_path
     json_data["TEXTURE_DATA"] = img_path
     json_data["MASK_DATA"] = "{}.obj".format(img_path[:-4])
     json_data["OUT_DATA"] = "{}.obj".format(img_path[:-4])
-    print(json_data)
     configManager.addPairs(json_data)
     assert os.path.exists(os.path.join(DIR_INPUT, img_path))
 
@@ -241,6 +249,7 @@ def main():
     time_it_wrapper(genPRMask, "Generating Mask", (os.path.join(DIR_INPUT, img_path), DIR_MASK))
     time_it_wrapper(genText, "Generating Texture", (
         os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])), os.path.join(DIR_TEXTURE, TEXTURE_DATA)))
+    display(os.path.join(DIR_TEXTURE, TEXTURE_DATA))
     time_it_wrapper(blender_wrapper, "Alignment",
                     args=(".\\geometry.blend", ".\\blender_script\\geo.py", INPUT_DATA, TEXTURE_DATA, HAIR_DATA,
                           MASK_DATA, OUT_DATA))
