@@ -4,29 +4,60 @@ from time import time
 from math import sqrt
 
 
-def color_gradient_v2(img, pts, x_range=None, y_range=None, x_loc=None, y_loc=None, mode="a"):
+def color_gradient_v4(img, edges_x):
+    # new_img = np.zeros_like(img, dtype=np.float32)
+    new_img = img.copy().astype(np.float32)
+    color = np.mean(img[np.argwhere(edges_x[:, 0] > 0), img.shape[1] // 2, :], axis=0)
+    for _y, (_x0, _x1) in enumerate(edges_x):
+        if _x0 != 0 and _x1 != img.shape[1]:
+            # appends edges
+            new_img[_y, -1, :] = new_img[_y, 0, :] = color
+            # left edge
+            length = _x0
+            left_color = new_img[_y, 0, :]
+            right_color = new_img[_y, _x0, :]
+            new_img[_y, :_x0, 0] = np.fromfunction(
+                lambda x: left_color[0] * (1 - x / length) + right_color[0] * (x / length), (length,))
+            new_img[_y, :_x0, 1] = np.fromfunction(
+                lambda x: left_color[1] * (1 - x / length) + right_color[1] * (x / length), (length,))
+            new_img[_y, :_x0, 2] = np.fromfunction(
+                lambda x: left_color[2] * (1 - x / length) + right_color[2] * (x / length), (length,))
+            # right edge
+            length = img.shape[1]-_x1
+            left_color = new_img[_y, _x1, :]
+            right_color = new_img[_y, -1, :]
+            new_img[_y, _x1:, 0] = np.fromfunction(
+                lambda x: left_color[0] * (1 - x / length) + right_color[0] * (x / length), (length,))
+            new_img[_y, _x1:, 1] = np.fromfunction(
+                lambda x: left_color[1] * (1 - x / length) + right_color[1] * (x / length), (length,))
+            new_img[_y, _x1:, 2] = np.fromfunction(
+                lambda x: left_color[2] * (1 - x / length) + right_color[2] * (x / length), (length,))
+
+            # internal
+            length = _x1 - _x0
+            left_color = new_img[_y, _x0, :]
+            right_color = new_img[_y, _x1, :]
+            new_img[_y, _x0:_x1, 0] = np.fromfunction(
+                lambda x: left_color[0] * (1 - x / length) + right_color[0] * (x / length), (length,))
+            new_img[_y, _x0:_x1, 1] = np.fromfunction(
+                lambda x: left_color[1] * (1 - x / length) + right_color[1] * (x / length), (length,))
+            new_img[_y, _x0:_x1, 2] = np.fromfunction(
+                lambda x: left_color[2] * (1 - x / length) + right_color[2] * (x / length), (length,))
+
+    new_img = new_img.round().clip(0, 255).astype(np.uint8)
+    return new_img
+
+
+def color_gradient_v3(img, pts, x_range=None, y_range=None, x_loc=None, y_loc=None):
     packed = []
-    if mode == 'r':
-        dists = np.zeros((len(pts),) * 2)
-        for i in range(len(pts)):
-            for j in range(len(pts)):
-                dists[i, j] = dist(pts[i], pts[j])
-        for i, (_y, _x) in enumerate(pts):
-            color = img[_y, _x]
-            loc = (_y, _x)
-            scale = np.max(dists[i])
-            packed.append((color, loc, scale))
-    elif mode == 'a':
-        for i, (_y, _x) in enumerate(pts):
-            color = img[_y, _x]
-            loc = (_y, _x)
-            scale = np.max([dist((_y, _x), (0, 0)),
-                            dist((_y, _x), (img.shape[0] - 1, 0)),
-                            dist((_y, _x), (0, img.shape[1] - 1)),
-                            dist((_y, _x), (img.shape[0] - 1, img.shape[1] - 1))])
-            packed.append((color, loc, scale))
-    else:
-        raise ValueError("Wrong Mode, should be, 'r': relative; 'a': absolute")
+    for i, (_y, _x) in enumerate(pts):
+        color = img[_y, _x]
+        loc = (_y, _x)
+        scale = np.max([dist((_y, _x), (0, 0)),
+                        dist((_y, _x), (img.shape[0] - 1, 0)),
+                        dist((_y, _x), (0, img.shape[1] - 1)),
+                        dist((_y, _x), (img.shape[0] - 1, img.shape[1] - 1))])
+        packed.append((color, loc, scale))
 
     new_img = np.zeros(img.shape)
     if y_range is not None:  # y_range not None
@@ -60,17 +91,29 @@ def color_gradient_v2(img, pts, x_range=None, y_range=None, x_loc=None, y_loc=No
     return new_img.round().astype(np.uint8)
 
 
-def color_gradient_v3(img, pts, x_range=None, y_range=None, x_loc=None, y_loc=None):
+def color_gradient_v2(img, pts, x_range=None, y_range=None, x_loc=None, y_loc=None, mode="a"):
     packed = []
-    for i, (_y, _x) in enumerate(pts):
-        color = img[_y, _x]
-        loc = (_y, _x)
-        scale = np.max([dist((_y, _x), (0, 0)),
-                        dist((_y, _x), (img.shape[0] - 1, 0)),
-                        dist((_y, _x), (0, img.shape[1] - 1)),
-                        dist((_y, _x), (img.shape[0] - 1, img.shape[1] - 1))])
-        packed.append((color, loc, scale))
-
+    if mode == 'r':
+        dists = np.zeros((len(pts),) * 2)
+        for i in range(len(pts)):
+            for j in range(len(pts)):
+                dists[i, j] = dist(pts[i], pts[j])
+        for i, (_y, _x) in enumerate(pts):
+            color = img[_y, _x]
+            loc = (_y, _x)
+            scale = np.max(dists[i])
+            packed.append((color, loc, scale))
+    elif mode == 'a':
+        for i, (_y, _x) in enumerate(pts):
+            color = img[_y, _x]
+            loc = (_y, _x)
+            scale = np.max([dist((_y, _x), (0, 0)),
+                            dist((_y, _x), (img.shape[0] - 1, 0)),
+                            dist((_y, _x), (0, img.shape[1] - 1)),
+                            dist((_y, _x), (img.shape[0] - 1, img.shape[1] - 1))])
+            packed.append((color, loc, scale))
+    else:
+        raise ValueError("Wrong Mode, should be, 'r': relative; 'a': absolute")
     new_img = np.zeros(img.shape)
     if y_range is not None:  # y_range not None
         for _y in y_range:
@@ -231,10 +274,13 @@ def find_ref_pts(img, pt, k=3, d=2, valid=is_black):
 
 
 def make_img(color, loc, scale, size=(256, 256)):
-    new_img = np.zeros((size[0],size[1],3), dtype=np.float32)
-    new_img[:,:, 0] = np.fromfunction(lambda i, j: color[0] * (1 - (np.sqrt((i - loc[0]) ** 2 + (j - loc[1]) ** 2)) / scale), size)
-    new_img[:,:, 1] = np.fromfunction(lambda i, j: color[1] * (1 - (np.sqrt((i - loc[0]) ** 2 + (j - loc[1]) ** 2)) / scale), size)
-    new_img[:,:, 2] = np.fromfunction(lambda i, j: color[2] * (1 - (np.sqrt((i - loc[0]) ** 2 + (j - loc[1]) ** 2)) / scale), size)
+    new_img = np.zeros((size[0], size[1], 3), dtype=np.float32)
+    new_img[:, :, 0] = np.fromfunction(
+        lambda i, j: color[0] * (1 - (np.sqrt((i - loc[0]) ** 2 + (j - loc[1]) ** 2)) / scale), size)
+    new_img[:, :, 1] = np.fromfunction(
+        lambda i, j: color[1] * (1 - (np.sqrt((i - loc[0]) ** 2 + (j - loc[1]) ** 2)) / scale), size)
+    new_img[:, :, 2] = np.fromfunction(
+        lambda i, j: color[2] * (1 - (np.sqrt((i - loc[0]) ** 2 + (j - loc[1]) ** 2)) / scale), size)
     # new_img = np.transpose(np.stack((img0, img1, img2)), (1, 2, 0))
     return new_img
 
@@ -308,20 +354,26 @@ if __name__ == "__main__":
     # display(img_new, "new_img")
 
     # color_gradient_demo1()
-    MAP_SIZE=(256,256)
-    initial_color = [{'loc': (MAP_SIZE[0] // 2, 0), 'color': (200, 190, 120), 'scale': 0, 'weight':1},
-                     {'loc': (MAP_SIZE[0] // 2, MAP_SIZE[1] - 1), 'color': (191, 90, 17), 'scale': 0,'weight':1},
-                     {'loc': (MAP_SIZE[0] // 2, MAP_SIZE[0] // 2), 'color': (255, 255, 255), 'scale': 0,'weight':0}]
-    all_pts = [i['loc'] for i in initial_color]
-    for d in initial_color:
-        _y, _x = d['loc']
-        d['scale'] = np.max([dist((_y, _x), (0, 0)),
-                            dist((_y, _x), (MAP_SIZE[0] - 1, 0)),
-                            dist((_y, _x), (0, MAP_SIZE[1] - 1)),
-                            dist((_y, _x), (MAP_SIZE[0] - 1, MAP_SIZE[1] - 1))])
-    img = np.zeros((MAP_SIZE[0], MAP_SIZE[1], 3),dtype=np.float32)
-    for i in initial_color:
-        img += make_img(i['color'],i['loc'], i['scale'], MAP_SIZE) * i['weight']
-    np.clip(img, 0, 255, img)
-    img = np.round(img).astype(np.uint8)
-    display(img,encode='RGB')
+    # MAP_SIZE=(256,256)
+    # initial_color = [{'loc': (MAP_SIZE[0] // 2, 0), 'color': (200, 190, 120), 'scale': 0, 'weight':1},
+    #                  {'loc': (MAP_SIZE[0] // 2, MAP_SIZE[1] - 1), 'color': (191, 90, 17), 'scale': 0,'weight':1},
+    #                  {'loc': (MAP_SIZE[0] // 2, MAP_SIZE[0] // 2), 'color': (255, 255, 255), 'scale': 0,'weight':0}]
+    # all_pts = [i['loc'] for i in initial_color]
+    # for d in initial_color:
+    #     _y, _x = d['loc']
+    #     d['scale'] = np.max([dist((_y, _x), (0, 0)),
+    #                         dist((_y, _x), (MAP_SIZE[0] - 1, 0)),
+    #                         dist((_y, _x), (0, MAP_SIZE[1] - 1)),
+    #                         dist((_y, _x), (MAP_SIZE[0] - 1, MAP_SIZE[1] - 1))])
+    # img = np.zeros((MAP_SIZE[0], MAP_SIZE[1], 3),dtype=np.float32)
+    # for i in initial_color:
+    #     img += make_img(i['color'],i['loc'], i['scale'], MAP_SIZE) * i['weight']
+    # np.clip(img, 0, 255, img)
+    # img = np.round(img).astype(np.uint8)
+    # display(img,encode='RGB')
+
+    start_time = time()
+    img = cv2.imread(r'Data\mask\0_texture.png')
+    edge_img, edge_along_y, edge_along_x = edge_detection(img, th=5)
+    new_img = color_gradient_v4(img, edge_along_y)
+    display(new_img, "v4")
