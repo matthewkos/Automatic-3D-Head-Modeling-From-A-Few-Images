@@ -7,7 +7,7 @@ class MeshViewer(pyglet.window.Window):
     def __init__(self, filename=None):
         self.rotation = 0.0
 
-        super(MeshViewer, self).__init__(1024, 720, caption='Demo', resizable=True)
+        super(MeshViewer, self).__init__(1024, 720, caption='Mesh Viewer', resizable=True)
         self.meshes = Wavefront(filename)
         pyglet.gl.glClearColor(1, 1, 1, 1)  # Note that these are values 0.0 - 1.0 and not (0-255).
         self.lightfv = ctypes.c_float * 4
@@ -36,8 +36,8 @@ class MeshViewer(pyglet.window.Window):
 
         pyglet.gl.glMatrixMode(pyglet.gl.GL_MODELVIEW)
 
-        pyglet.gl.glTranslated(0, .8, -20)
-        pyglet.gl.glRotatef(-66.5, 0, 0, 1)
+        # pyglet.gl.glTranslated(0, .8, -20)
+        pyglet.gl.glRotatef(-90, 0, 0, 1)
         pyglet.gl.glRotatef(self.rotation, 1, 0, 0)
         pyglet.gl.glRotatef(90, 0, 0, 1)
         pyglet.gl.glRotatef(0, 0, 1, 0)
@@ -55,7 +55,7 @@ class MeshViewer(pyglet.window.Window):
 
 if __name__ == "__main__":
     # window = pyglet.window.Window(1024, 720, caption='Demo', resizable=True)
-    window = MeshViewer('output\\0.obj')
+    window = MeshViewer('.\\output\\0.obj')
     pyglet.clock.schedule(window.update)
     pyglet.app.run()
     window.show_window()

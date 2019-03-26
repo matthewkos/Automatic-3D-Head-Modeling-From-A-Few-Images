@@ -2,7 +2,7 @@ from time import time
 import warnings
 import os
 import subprocess
-from ConfigManager import ConfigManager
+from DataHelper import ConfigManager
 
 def blender_wrapper(blender_file, script_file_path, input_data, texture, hair, mask, output):
     # LOAD CONFIG FILE
