@@ -705,6 +705,7 @@ if __name__ == '__main__':
         HAIR_DATA = json_data["HAIR_DATA"]
         MASK_DATA = json_data["MASK_DATA"]
         OUT_DATA = json_data["OUT_DATA"]
+        HAIR = json_data["HAIR"]
         del json_data
 
     """
@@ -723,7 +724,7 @@ if __name__ == '__main__':
         object_mode('Head')
 
     # hair
-    if select('Hair') is None:
+    if HAIR and select('Hair') is None:
         remove_hair()
         import_hair(os.path.join(DIR_HAIR, HAIR_DATA))
         align_head_hair()

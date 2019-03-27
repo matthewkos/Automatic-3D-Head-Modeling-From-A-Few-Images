@@ -137,7 +137,7 @@ def genText(img_path, output_path):
 """Call Blender"""
 
 
-def blender_wrapper(blender_file, script_file_path, input_data, texture, hair, mask, output):
+def blender_wrapper(blender_file, script_file_path, input_data, texture, hair, mask, output, gen_hair, background=True):
     # LOAD CONFIG FILE
     configManager = ConfigManager('.\\config.ini')
     keyAndValue = {}
@@ -146,12 +146,16 @@ def blender_wrapper(blender_file, script_file_path, input_data, texture, hair, m
     keyAndValue['HAIR_DATA'] = hair
     keyAndValue['MASK_DATA'] = mask
     keyAndValue['OUT_DATA'] = output
+    keyAndValue['HAIR'] = gen_hair
     configManager.addPairs(keyAndValue)
     # SAVE CONFIG FILE
 
     blender = r".\\Blender\\blender.exe"
     if os.path.exists(blender):
-        cmd = "{} -b {} -P {}".format(blender, blender_file, script_file_path)
+        if background:
+            cmd = "{} -b {} -P {}".format(blender, blender_file, script_file_path)
+        else:
+            cmd = "{} {} -P {}".format(blender, blender_file, script_file_path)
         print(cmd)
         try:
             return_code = subprocess.call(cmd.split(' '), shell=True)
@@ -211,6 +215,14 @@ def time_it_wrapper(callback, name="", args=(), kwargs={}):
 
 
 def main():
+    """
+    Main
+    :return:
+    """
+    """Ask for input"""
+    # img_path = input("Path of image: ")
+    img_path = "0.jpg"
+
     global_start = time()
     """Import constants from config file"""
     configManager = ConfigManager('.\\config.ini')
@@ -227,32 +239,34 @@ def main():
     HAIR_DATA = json_data["HAIR_DATA"]
     MASK_DATA = json_data["MASK_DATA"]
     OUT_DATA = json_data["OUT_DATA"]
+    HAIR = json_data["HAIR"]
+
+    INPUT_DATA = json_data['INPUT_DATA'] = img_path
+    TEXTURE_DATA = json_data["TEXTURE_DATA"] = img_path
+    MASK_DATA = json_data["MASK_DATA"] = "{}.obj".format(img_path[:-4])
+    OUT_DATA = json_data["OUT_DATA"] = "{}.obj".format(img_path[:-4])
+    configManager.addPairs(json_data)
+    assert os.path.exists(os.path.join(DIR_INPUT, img_path))
 
     """Setup"""
     warnings.filterwarnings("ignore")
     print("Importing packages: ")
     start_time = time()
     from PRNet.myPRNET import genPRMask
-
     print("\ttime={:.2f}s".format(time() - start_time))
     """END"""
-    # img_path = input("Path of image: ")
-    img_path = INPUT_DATA
-    json_data['INPUT_DATA'] = img_path
-    json_data["TEXTURE_DATA"] = img_path
-    json_data["MASK_DATA"] = "{}.obj".format(img_path[:-4])
-    json_data["OUT_DATA"] = "{}.obj".format(img_path[:-4])
-    configManager.addPairs(json_data)
-    assert os.path.exists(os.path.join(DIR_INPUT, img_path))
-
+    """Geometry"""
     time_it_wrapper(None, "Generating Geometry")
+    """Mask"""
     time_it_wrapper(genPRMask, "Generating Mask", (os.path.join(DIR_INPUT, img_path), DIR_MASK))
+    """Texture"""
     time_it_wrapper(genText, "Generating Texture", (
         os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])), os.path.join(DIR_TEXTURE, TEXTURE_DATA)))
-    display(os.path.join(DIR_TEXTURE, TEXTURE_DATA))
+    # display(os.path.join(DIR_TEXTURE, TEXTURE_DATA))
+    """Alignment"""
     time_it_wrapper(blender_wrapper, "Alignment",
                     args=(".\\geometry.blend", ".\\blender_script\\geo.py", INPUT_DATA, TEXTURE_DATA, HAIR_DATA,
-                          MASK_DATA, OUT_DATA))
+                          MASK_DATA, OUT_DATA, False, False))
     print("Output to: {}".format(os.path.join(os.getcwd(), DIR_OUT, OUT_DATA)))
     print("Total_time: {:.2f}".format(time() - global_start))
     return
