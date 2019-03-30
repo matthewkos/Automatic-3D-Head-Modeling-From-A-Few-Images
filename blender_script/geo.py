@@ -224,7 +224,7 @@ def head_uv(file):
     if bpy.data.images.get('uv_map') is not None:
         bpy.data.images.remove(bpy.data.images['uv_map'])
     bpy.context.scene.objects.active = bpy.data.objects['Head']
-    bpy.ops.image.open(filepath=os.path.join(os.getcwd(), file))
+    bpy.data.images.load(filepath=os.path.join(os.getcwd(), file))
     bpy.data.images[os.path.split(file)[-1]].name = "uv_map"
     img = bpy.data.images.get('uv_map')
     bpy.context.scene.objects.active = bpy.data.objects['Head']
@@ -561,9 +561,9 @@ class HeadMask_Align:
         bpy.ops.mesh.separate(type='MATERIAL')
 
         bpy.data.objects['Object'].name = 'Head'
-        bpy.data.meshes['0'].name = 'Head-mesh'
+        bpy.data.meshes[INPUT_DATA[:-4]].name = 'Head-mesh'
         bpy.data.objects['Object.001'].name = 'Face'
-        bpy.data.meshes['0.001'].name = 'Face-mesh'
+        bpy.data.meshes['{}.001'.format(INPUT_DATA[:-4])].name = 'Face-mesh'
         return
 
 
