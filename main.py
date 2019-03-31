@@ -39,7 +39,7 @@ def edge_detection(img, th=10):
     return grad, edge_along_y, edge_along_x
 
 
-def image_expansion(img, mode=''):
+def image_expansion(img, internal=False):
     # new_img = np.zeros_like(img, dtype=np.float32)
     new_img = img.copy().astype(np.float32)
     _, edges_along_y, edges_along_x = edge_detection(img, th=5)
@@ -69,7 +69,7 @@ def image_expansion(img, mode=''):
             new_img[_y, _x1:, 2] = np.fromfunction(
                 lambda x: left_color[2] * (1 - x / length) + right_color[2] * (x / length), (length,))
             # internal
-            if 'i' in mode:
+            if internal:
                 length = _x1 - _x0
                 left_color = new_img[_y, _x0, :]
                 right_color = new_img[_y, _x1, :]
@@ -124,12 +124,17 @@ def image_expansion(img, mode=''):
     return new_img
 
 
-def genText(img_path, output_path):
+def genText(img_path, output_path, size=None, internal=False):
+    assert size is None or (type(size) == tuple and len(size) == 3)
+
     img = cv2.imread(img_path)
     # 256 * 256 -> 1024*256
-    new_img = np.zeros((256, 512, 3), dtype=np.uint8)
-    new_img[:, (512-256)//2:(512+256)//2, :] = img
-    img = image_expansion(new_img, 'i')
+    if size is None:
+        size = img.shape
+    new_img = np.zeros(size, dtype=np.uint8)
+    new_img[(size[0] - img.shape[0]) // 2:(size[0] + img.shape[0]) // 2,
+            (size[1] - img.shape[1]) // 2:(size[1] + img.shape[1]) // 2, :] = img
+    img = image_expansion(new_img, internal)
     cv2.imwrite(output_path, img)
     return
 
@@ -260,8 +265,11 @@ def main():
     """Mask"""
     time_it_wrapper(genPRMask, "Generating Mask", (os.path.join(DIR_INPUT, img_path), DIR_MASK))
     """Texture"""
-    time_it_wrapper(genText, "Generating Texture", (
-        os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])), os.path.join(DIR_TEXTURE, TEXTURE_DATA)))
+    time_it_wrapper(genText, "Generating External Texture", (
+        os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])), os.path.join(DIR_TEXTURE, TEXTURE_DATA),
+        (512, 512, 3), True))
+    # time_it_wrapper(genText, "Generating Internal Texture", (
+    #     os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])),) * 2)
     # display(os.path.join(DIR_TEXTURE, TEXTURE_DATA))
     """Alignment"""
     time_it_wrapper(blender_wrapper, "Alignment",
