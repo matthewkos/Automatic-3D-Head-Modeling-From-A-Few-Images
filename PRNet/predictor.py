@@ -4,6 +4,10 @@ from tensorflow.contrib.framework import arg_scope
 import numpy as np
 
 
+def getTFsess():
+    return tf.Session(config=tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True)))
+
+
 def resBlock(x, num_outputs, kernel_size=4, stride=1, activation_fn=tf.nn.relu, normalizer_fn=tcl.batch_norm,
              scope=None):
     assert num_outputs % 2 == 0  # num_outputs must be divided by channel_factor(2 here)
@@ -80,7 +84,7 @@ class resfcn256(object):
 
 
 class PosPrediction():
-    def __init__(self, resolution_inp=256, resolution_op=256):
+    def __init__(self, resolution_inp=256, resolution_op=256, sess=None):
         # -- hyper settings
         self.resolution_inp = resolution_inp
         self.resolution_op = resolution_op
@@ -92,7 +96,10 @@ class PosPrediction():
         # net forward
         self.x = tf.placeholder(tf.float32, shape=[None, self.resolution_inp, self.resolution_inp, 3])
         self.x_op = self.network(self.x, is_training=False)
-        self.sess = tf.Session(config=tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True)))
+        if sess is None:
+            self.sess = getTFsess()
+        else:
+            self.sess = sess
 
     def restore(self, model_path):
         tf.train.Saver(self.network.vars).restore(self.sess, model_path)

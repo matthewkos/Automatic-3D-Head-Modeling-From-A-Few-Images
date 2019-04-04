@@ -13,7 +13,7 @@ class PRN:
         prefix(str, optional): If run at another folder, the absolute path is needed to load the data.
     '''
 
-    def __init__(self, is_mtcnn=False, prefix='.'):
+    def __init__(self, is_mtcnn=False, prefix='.', sess=None):
 
         # resolution of input and output image size.
         self.resolution_inp = 256
@@ -25,7 +25,8 @@ class PRN:
             self.face_detector = MTCNN()
 
         # ---- load PRN
-        self.pos_predictor = PosPrediction(self.resolution_inp, self.resolution_op)
+        self.sess = sess
+        self.pos_predictor = PosPrediction(self.resolution_inp, self.resolution_op, self.sess)
         prn_path = os.path.join(os.path.join(prefix, __package__, 'Data/net-data/256_256_resfcn256_weight'))
         if not os.path.isfile(prn_path + '.data-00000-of-00001'):
             print("please download PRN trained model first.")
