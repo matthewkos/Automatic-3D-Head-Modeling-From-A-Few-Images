@@ -8,7 +8,8 @@ from datetime import datetime
 from PIL import Image
 from MeshViewer import MeshViewer
 from DataHelper import ConfigManager
-from main import time_it_wrapper
+from main import *
+import tensorflow as tf
 
 class ImageViewer(object):
 
@@ -58,6 +59,8 @@ if __name__ == '__main__':
         print("Cannot import PRNet. Please install all required packages in requirement.txt.")
         print("pip install -r requirement.txt")
     print("\ttime={:.2f}s".format(time() - start_time))
+    # create tensorflow sess
+    sess = tf.Session(config=tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True)))
     ##################################################
 
     sg.ChangeLookAndFeel('DarkBlue')
@@ -180,23 +183,52 @@ if __name__ == '__main__':
 
             if values["_full_model_radio_"]:
                 # Generate complete model
+
+                global_start = time()
+
+                """Geometry"""
+                time_it_wrapper(None, "Generating Geometry")
+
+                """Mask"""
+
+                time_it_wrapper(genPRMask, "Generating Mask", (relative_current_img_path, DIR_MASK),
+                                kwargs={'isMask': False, 'sess': sess})
+                """Texture"""
+                time_it_wrapper(genText, "Generating Texture", (
+                    os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])),
+                    os.path.join(DIR_TEXTURE, TEXTURE_DATA)))
+
+                """Alignment"""
+                time_it_wrapper(blender_wrapper, "Alignment",
+                                args=(
+                                    ".\\geometry.blend", ".\\blender_script\\geo.py", INPUT_DATA, TEXTURE_DATA,
+                                    HAIR_DATA,
+                                    MASK_DATA, OUT_DATA, True, False))
+
+                print("Output to: {}".format(os.path.join(os.getcwd(), DIR_OUT, OUT_DATA)))
+                print("Total_time: {:.2f}".format(time() - global_start))
+
                 pass
             elif values["_head_only_radio_"]:
                 # Generate head model only
+
                 """Geometry"""
                 time_it_wrapper(None, "Generating Geometry")
 
                 """Mask"""
 
                 time_it_wrapper(genPRMask, "Generating Mask", (relative_current_img_path, DIR_MASK))
-                
+
                 """Texture"""
                 time_it_wrapper(genText, "Generating Texture", (
-                    os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])), os.path.join(DIR_TEXTURE, TEXTURE_DATA)))
+                    os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])),
+                    os.path.join(DIR_TEXTURE, TEXTURE_DATA)))
 
                 """Alignment"""
                 time_it_wrapper(blender_wrapper, "Alignment",
-                                args=(".\\geometry.blend", ".\\blender_script\\geo.py", INPUT_DATA, TEXTURE_DATA, HAIR_DATA,
+                                args=(
+                                    ".\\geometry.blend", ".\\blender_script\\geo.py", INPUT_DATA, TEXTURE_DATA,
+                                    HAIR_DATA,
                                     MASK_DATA, OUT_DATA, False, False))
 
                 print("Output to: {}".format(os.path.join(os.getcwd(), DIR_OUT, OUT_DATA)))
