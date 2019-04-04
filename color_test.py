@@ -476,6 +476,127 @@ def image_expansion_v2(img, internal=False):
     return new_img_x
 
 
+def image_expansion_v3(img, internal=False):
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV).astype(np.float64)
+    img[:, :, 2] *= 1.5
+    avg_color = img[img.sum(-1) > 0].mean(0)
+    maskHSV = cv2.inRange(img, avg_color - np.array([10, 40, 25]), avg_color + np.array([10, 100, 50]))
+    for i in range(maskHSV.shape[0]):
+        t = maskHSV[i].nonzero()[0].flatten()
+        if t.size > 1:
+            maskHSV[i, t[0]:t[-1]] = 255
+    resultHSV = cv2.bitwise_and(img, img, mask=maskHSV)
+
+    new_img_x = resultHSV.copy().astype(np.float32)
+    img = resultHSV
+    for r in range(img.shape[0]):
+        t = np.argwhere(img[r].sum(-1) > 0).flatten()
+        if t.size > 0:
+            left_edge = np.min(t) + 5
+            right_edge = np.max(t) - 5
+
+            while img[r, left_edge].sum(-1) <= 5:
+                left_edge -= 1
+            while img[r, right_edge].sum(-1) <= 5:
+                right_edge += 1
+            # left edge
+            new_img_x = color_grad_2_pts_x(new_img_x, x0=0, x1=left_edge, y=r,
+                                           left_color=img[r, left_edge] * 0.5 + avg_color * 0.5,
+                                           right_color=img[r, left_edge])
+
+            # right edge
+            new_img_x = color_grad_2_pts_x(new_img_x, x0=right_edge, x1=img.shape[1], y=r,
+                                           left_color=img[r, right_edge, :],
+                                           right_color=img[r, right_edge, :] * 0.5 + avg_color * 0.5)
+
+            # internal
+            if internal:
+                left_edge = np.min(t)
+                right_edge = np.max(t)
+                while img[r, left_edge].sum(-1) <= 5:
+                    left_edge += 1
+                while img[r, right_edge].sum(-1) <= 5:
+                    right_edge -= 1
+                new_img_x = color_grad_2_pts_x(new_img_x, x0=left_edge, x1=right_edge, y=r,
+                                               left_color=new_img_x[r, left_edge],
+                                               right_color=new_img_x[r, right_edge])
+    #
+    # new_img_y = new_img_x.copy().astype(np.float32)
+    # for c in range(new_img_y.shape[1]):
+    #     t = np.argwhere(new_img_y[:, c, :].sum(-1) > 0).flatten()
+    #     if t.size > 0:
+    #         left_edge = np.min(t) + 5
+    #         right_edge = np.max(t) - 5
+    #         while new_img_y[left_edge, c].sum(-1) <= 5:
+    #             left_edge -= 1
+    #         while new_img_y[right_edge, c].sum(-1) <= 5:
+    #             right_edge += 1
+    #         # left edge
+    #         new_img_y = color_grad_2_pts_y(new_img_y, y0=0, y1=left_edge, x=c,
+    #                                        left_color=new_img_y[left_edge, c] * 0.5 + avg_color * 0.5,
+    #                                        right_color=new_img_y[left_edge, c])
+    #         new_img_x = color_grad_2_pts_y(new_img_x, y0=0, y1=left_edge, x=c,
+    #                                        left_color=new_img_y[left_edge, c] * 0.5 + avg_color * 0.5,
+    #                                        right_color=new_img_y[left_edge, c])
+    #
+    #         # right edge
+    #         new_img_y = color_grad_2_pts_y(new_img_y, y0=right_edge, y1=img.shape[0], x=c,
+    #                                        left_color=new_img_y[right_edge, c, :],
+    #                                        right_color=new_img_y[right_edge, c, :] * 0.5 + avg_color * 0.5)
+    #         new_img_x = color_grad_2_pts_y(new_img_x, y0=right_edge, y1=img.shape[0], x=c,
+    #                                        left_color=new_img_y[right_edge, c, :],
+    #                                        right_color=new_img_y[right_edge, c, :] * 0.5 + avg_color * 0.5)
+    #         if internal:
+    #             left_edge = np.min(t) - 5
+    #             right_edge = np.max(t) + 5
+    #             while new_img_y[left_edge, c].sum(-1) <= 5:
+    #                 left_edge += 1
+    #             while new_img_y[right_edge, c].sum(-1) <= 5:
+    #                 right_edge -= 1
+    #             new_img_y = color_grad_2_pts_y(new_img_y, y0=left_edge, y1=right_edge, x=c,
+    #                                            left_color=new_img_y[left_edge, c, :],
+    #                                            right_color=new_img_y[right_edge, c, :] * 0.5 + avg_color * 0.5)
+    # img_recover = cv2.addWeighted(new_img_x, 0.5, new_img_y, 0.5, 0)
+    return new_img_x
+
+
+def main_2():
+    start_time = time()
+    img_BGR = cv2.imread(r'Data\mask\0test.png')
+
+    img_append = image_expansion_v2(img_BGR, True).round().clip(0, 255).astype(np.uint8)
+    img_append = cv2.cvtColor(img_append, cv2.COLOR_HSV2BGR)
+
+    img_intern = image_expansion_v2(img_BGR, False).round().clip(0, 255).astype(np.uint8)
+    img_intern = cv2.cvtColor(img_intern, cv2.COLOR_HSV2BGR)
+    display(np.concatenate((img_BGR, img_intern, img_append), axis=1))
+    print("Time Elapsed {:.2f}".format(time() - start_time))
+
+
+def main_v3():
+    start_time = time()
+    img_BGR = cv2.imread(r'Data\mask\0test.png')
+    img = cv2.cvtColor(img_BGR, cv2.COLOR_BGR2HSV).astype(np.float64)
+    avg_color = img[np.logical_and(img.sum(-1) > 10, img.sum(-1) < 700)].mean(0)
+    print(avg_color)
+
+    maskHSV = cv2.inRange(img, np.array([0, 0, 0], dtype=np.float64),
+                          avg_color + np.array([10, 50, 50], dtype=np.float64))
+    # for i in range(maskHSV.shape[0]):
+    #     t = maskHSV[i].nonzero()[0].flatten()
+    #     if t.size > 1:
+    #         maskHSV[i, t[0]:t[-1]] = 255
+    resultHSV = cv2.bitwise_and(img, img, mask=maskHSV)
+    # print(resultHSV)
+    # img_append = image_expansion_v3(img_BGR, True).round().clip(0, 255).astype(np.uint8)
+    # img_append = cv2.cvtColor(img_append, cv2.COLOR_HSV2BGR)
+    # img_intern = image_expansion_v3(img_BGR, False).round().clip(0, 255).astype(np.uint8)
+    # img_intern = cv2.cvtColor(img_intern, cv2.COLOR_HSV2BGR)
+    resultHSV = cv2.cvtColor(resultHSV.astype(np.uint8), cv2.COLOR_HSV2BGR)
+    display(np.concatenate((img_BGR, resultHSV), axis=1))
+    print("Time Elapsed {:.2f}".format(time() - start_time))
+
+
 if __name__ == "__main__":
     # detect edge
     # start_time = time()
@@ -569,13 +690,4 @@ if __name__ == "__main__":
     # new_img = color_gradient_v4(img, edge_along_y)
     # display(new_img, "v4")
 
-    start_time = time()
-    img_BGR = cv2.imread(r'Data\mask\0test.png')
-
-    img_append = image_expansion_v2(img_BGR, True).round().clip(0, 255).astype(np.uint8)
-    img_append = cv2.cvtColor(img_append, cv2.COLOR_HSV2BGR)
-
-    img_intern = image_expansion_v2(img_BGR, False).round().clip(0, 255).astype(np.uint8)
-    img_intern = cv2.cvtColor(img_intern, cv2.COLOR_HSV2BGR)
-    display(np.concatenate((img_BGR, img_intern, img_append), axis=1))
-    print("Time Elapsed {:.2f}".format(time() - start_time))
+    main_v3()
