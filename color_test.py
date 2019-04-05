@@ -597,6 +597,11 @@ def main_v3():
     print("Time Elapsed {:.2f}".format(time() - start_time))
 
 
+def main_v4():
+    start_time = time()
+    img_BGR = cv2.imread(r'Data\mask\0test.png')
+
+
 if __name__ == "__main__":
     # detect edge
     # start_time = time()
@@ -690,4 +695,5 @@ if __name__ == "__main__":
     # new_img = color_gradient_v4(img, edge_along_y)
     # display(new_img, "v4")
 
-    main_v3()
+    # main_v3()
+    main_v4()

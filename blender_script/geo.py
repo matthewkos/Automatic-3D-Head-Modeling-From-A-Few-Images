@@ -407,7 +407,7 @@ class HeadMask_Align:
         bpy.ops.mesh.select_all(action='DESELECT')
         return mesh
 
-    def get_kpts(self):
+    def get_kpts(self, DIR_KPTS):
         # ! load the vertex index correspond to facial landmarks
         # procedure refer to get_kpt_ind.py
         # global kpt_ind, left_ind, fore_ind, jaw_ind, ind_bound, neck_ind
@@ -516,11 +516,11 @@ class HeadMask_Align:
 
         # bpy.context.scene.objects.active = ob # refresh the scene
 
-    def align_face(self, MASK_DATA):
+    def align_face(self, MASK_DATA, DIR_KPTS):
         """
         GET data from files
         """
-        kpt_ind, left_ind, fore_ind, jaw_ind, ind_bound, neck_ind, ear_ind = self.get_kpts()
+        kpt_ind, left_ind, fore_ind, jaw_ind, ind_bound, neck_ind, ear_ind = self.get_kpts(DIR_KPTS)
         object_mode('Head')
         import_obj(os.path.join(DIR_MASK, MASK_DATA), 'Object')
         bpy.context.scene.objects.active = None
@@ -713,7 +713,7 @@ if __name__ == '__main__':
     """
     if select('Face') is None:
         align = HeadMask_Align()
-        align.align_face(MASK_DATA)
+        align.align_face(MASK_DATA, DIR_KPTS)
         modify_face()
 
     """
