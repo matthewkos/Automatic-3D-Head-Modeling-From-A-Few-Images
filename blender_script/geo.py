@@ -423,8 +423,8 @@ class HeadMask_Align:
         return kpt_ind, left_ind, fore_ind, jaw_ind, ind_bound, neck_ind, ear_ind
 
     def get_scale(self, face, head):
-        P1_REF = 45450#52447 
-        P2_REF = 36100#44683
+        P1_REF = 52447
+        P2_REF = 44683
         P21_REF = 28003
         P22_REF = 27792
         p1 = head[P1_REF - self.FACE_COUNT]
