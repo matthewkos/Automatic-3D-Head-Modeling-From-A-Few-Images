@@ -415,9 +415,9 @@ class HeadMask_Align:
         # DIR_KPTS = 'C:\\Users\\KTL\\Desktop\\FYP-code\\Data\\geometry'
         ind_bound = np.loadtxt(os.path.join(DIR_KPTS, 'bound.txt')).astype(np.int32)
         kpt_ind = np.loadtxt(os.path.join(DIR_KPTS, 'kpt_ind.txt')).astype(np.int32)  # ntri x 3
-        left_ind = np.loadtxt(os.path.join(DIR_KPTS, 'left_ind_new.txt')).astype(np.int32)
-        fore_ind = np.loadtxt(os.path.join(DIR_KPTS, 'fore_ind_new.txt')).astype(np.int32)
-        jaw_ind = np.loadtxt(os.path.join(DIR_KPTS, 'jaw_ind_new.txt')).astype(np.int32)
+        left_ind = np.loadtxt(os.path.join(DIR_KPTS, 'left.txt')).astype(np.int32)
+        fore_ind = np.loadtxt(os.path.join(DIR_KPTS, 'fore.txt')).astype(np.int32)
+        jaw_ind = np.loadtxt(os.path.join(DIR_KPTS, 'jaw.txt')).astype(np.int32)
         neck_ind = np.loadtxt(os.path.join(DIR_KPTS, 'neck.txt')).astype(np.int32)
         ear_ind = np.loadtxt(os.path.join(DIR_KPTS, 'ear.txt')).astype(np.int32)
 
@@ -428,8 +428,8 @@ class HeadMask_Align:
         return kpt_ind, left_ind, fore_ind, jaw_ind, ind_bound, neck_ind, ear_ind
 
     def get_scale(self, face, head):
-        P1_REF = 4545 + self.FACE_COUNT#45450#52447 
-        P2_REF = 361 + self.FACE_COUNT#36100#44683
+        P1_REF = 4545 + self.FACE_COUNT  # 45450#52447
+        P2_REF = 361 + self.FACE_COUNT  # 36100#44683
         P21_REF = 28003
         P22_REF = 27792
         p1 = head[P1_REF - self.FACE_COUNT]
@@ -544,7 +544,6 @@ class HeadMask_Align:
         Translate face
         """
         transx, transy, transz = self.get_pos(face, head, left_ind, kpt_ind, jaw_ind)
-        # TODO: use blender. move
         face[:, 0] += 0
         face[:, 1] += transy
         face[:, 2] += transz
@@ -556,10 +555,9 @@ class HeadMask_Align:
         self.edge_fit(face, head, mesh, fore_ind, jaw_ind, ind_bound, kpt_ind)
 
         bpy.ops.mesh.select_all(action='DESELECT')
-        self.sel_vert(neck_ind, mesh)
+        # self.sel_vert(neck_ind, mesh)
         self.sel_vert(ear_ind, mesh)
         bpy.ops.mesh.delete(type='VERT')
-        # TODO :delete ear
         # sel_vert(ear_ind, mesh)
         # bpy.ops.mesh.delete(type='VERT')
 

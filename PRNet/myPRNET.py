@@ -80,13 +80,12 @@ import cv2
 #     print("Time Elasped {}".format(end_time-start_time))
 
 def genPRMask(image_path, save_folder='temp', isMTCNN=True, isFront=True, isTexture=True, isMask=True, isKpt=False,
-              isCrop=True, texture_size=256):
+              isCrop=True, texture_size=256, sess=None):
     start_time = time()
     # os.environ['CUDA_VISIBLE_DEVICES'] = 0
     if not os.path.exists(save_folder):
         os.mkdir(save_folder)
-
-    prn = PRN(is_mtcnn=isMTCNN)
+    prn = PRN(is_mtcnn=isMTCNN, sess=sess)
     name = image_path.strip().split('\\')[-1][:-4]
     # read image
     try:
@@ -134,9 +133,11 @@ def genPRMask(image_path, save_folder='temp', isMTCNN=True, isFront=True, isText
                 texture = texture * uv_mask[:, :, np.newaxis]
             write_obj_with_texture(os.path.join(save_folder, name + '.obj'), save_vertices, prn.triangles, texture,
                                    prn.uv_coords / prn.resolution_op)  # save 3d face with texture(can open with meshlab)
-        else:
-            write_obj_with_colors(os.path.join(save_folder, name + '.obj'), save_vertices, prn.triangles,
-                                  colors)  # save 3d face(can open with meshlab)
+            vertices_vis = get_visibility(vertices, prn.triangles, h, w)
+            uv_mask = get_uv_mask(vertices_vis, prn.triangles, prn.uv_coords, h, w, prn.resolution_op)
+            uv_mask = resize(uv_mask, (texture_size, texture_size), preserve_range=True)
+            texture = texture * uv_mask[:, :, np.newaxis]
+            imsave(os.path.join(save_folder, name + '_texture_2.png'), texture)  # save 3d face(can open with meshlab)
         if isKpt:
             # get landmarks
             kpt = prn.get_landmarks(pos)

@@ -6,6 +6,10 @@ from DataHelper import ConfigManager
 import cv2
 import numpy as np
 from math import sqrt
+import tensorflow as tf
+
+def getTFsess():
+    return tf.Session(config=tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True)))
 
 """ Texture Generation """
 
@@ -39,97 +43,211 @@ def edge_detection(img, th=10):
     return grad, edge_along_y, edge_along_x
 
 
-def image_expansion(img, mode=''):
-    # new_img = np.zeros_like(img, dtype=np.float32)
-    new_img = img.copy().astype(np.float32)
-    _, edges_along_y, edges_along_x = edge_detection(img, th=5)
-    color = np.mean(img[np.argwhere(edges_along_y[:, 0] > 0), img.shape[1] // 2, :], axis=0)
-    for _y, (_x0, _x1) in enumerate(edges_along_y):
-        if _x0 != 0 and _x1 != img.shape[1]:
-            # appends edges
-            new_img[_y, -1, :] = new_img[_y, 0, :] = color
+def color_grad_2_pts_x(img, x0, x1, y, left_color, right_color):
+    length = x1 - x0
+    img[y, x0:x1, 0] = np.fromfunction(
+        lambda x: left_color[0] * (1 - x / length) + right_color[0] * (x / length), (length,))
+    img[y, x0:x1, 1] = np.fromfunction(
+        lambda x: left_color[1] * (1 - x / length) + right_color[1] * (x / length), (length,))
+    img[y, x0:x1, 2] = np.fromfunction(
+        lambda x: left_color[2] * (1 - x / length) + right_color[2] * (x / length), (length,))
+    return img
+
+
+def color_grad_2_pts_y(img, y0, y1, x, left_color, right_color):
+    length = y1 - y0
+    img[y0:y1, x, 0] = np.fromfunction(
+        lambda _x: left_color[0] * (1 - _x / length) + right_color[0] * (_x / length), (length,))
+    img[y0:y1, x, 1] = np.fromfunction(
+        lambda _x: left_color[1] * (1 - _x / length) + right_color[1] * (_x / length), (length,))
+    img[y0:y1, x, 2] = np.fromfunction(
+        lambda _x: left_color[2] * (1 - _x / length) + right_color[2] * (_x / length), (length,))
+    return img
+
+
+def image_expansion_v2(img, internal=False):
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV).astype(np.float64)
+    if internal:
+        img[:, :, 2] *= 1.2
+        img[:, :, 1] *= 0.8
+    avg_color = img[img.sum(-1) > 0].mean(0)
+    maskHSV = cv2.inRange(img, avg_color - np.array([10, 40, 25]), avg_color + np.array([10, 100, 50]))
+    for i in range(maskHSV.shape[0]):
+        t = maskHSV[i].nonzero()[0].flatten()
+        if t.size > 1:
+            maskHSV[i, t[0]:t[-1]] = 255
+    resultHSV = cv2.bitwise_and(img, img, mask=maskHSV)
+
+    new_img_x = resultHSV.copy().astype(np.float32)
+    img = resultHSV
+    for r in range(img.shape[0]):
+        t = np.argwhere(img[r].sum(-1) > 0).flatten()
+        if t.size > 0:
+            left_edge = np.min(t) + 5
+            right_edge = np.max(t) - 5
+
+            while img[r, left_edge].sum(-1) <= 5:
+                left_edge -= 1
+            while img[r, right_edge].sum(-1) <= 5:
+                right_edge += 1
             # left edge
-            length = _x0
-            left_color = new_img[_y, 0, :]
-            right_color = new_img[_y, _x0, :]
-            new_img[_y, :_x0, 0] = np.fromfunction(
-                lambda x: left_color[0] * (1 - x / length) + right_color[0] * (x / length), (length,))
-            new_img[_y, :_x0, 1] = np.fromfunction(
-                lambda x: left_color[1] * (1 - x / length) + right_color[1] * (x / length), (length,))
-            new_img[_y, :_x0, 2] = np.fromfunction(
-                lambda x: left_color[2] * (1 - x / length) + right_color[2] * (x / length), (length,))
+            new_img_x = color_grad_2_pts_x(new_img_x, x0=0, x1=left_edge, y=r,
+                                           left_color=img[r, left_edge] * 0.5 + avg_color * 0.5,
+                                           right_color=img[r, left_edge])
+
             # right edge
-            length = img.shape[1] - _x1
-            left_color = new_img[_y, _x1, :]
-            right_color = new_img[_y, -1, :]
-            new_img[_y, _x1:, 0] = np.fromfunction(
-                lambda x: left_color[0] * (1 - x / length) + right_color[0] * (x / length), (length,))
-            new_img[_y, _x1:, 1] = np.fromfunction(
-                lambda x: left_color[1] * (1 - x / length) + right_color[1] * (x / length), (length,))
-            new_img[_y, _x1:, 2] = np.fromfunction(
-                lambda x: left_color[2] * (1 - x / length) + right_color[2] * (x / length), (length,))
+            new_img_x = color_grad_2_pts_x(new_img_x, x0=right_edge, x1=img.shape[1], y=r,
+                                           left_color=img[r, right_edge, :],
+                                           right_color=img[r, right_edge, :] * 0.5 + avg_color * 0.5)
+
             # internal
-            if 'i' in mode:
-                length = _x1 - _x0
-                left_color = new_img[_y, _x0, :]
-                right_color = new_img[_y, _x1, :]
-                new_img[_y, _x0:_x1, 0] = np.fromfunction(
-                    lambda x: left_color[0] * (1 - x / length) + right_color[0] * (x / length), (length,))
-                new_img[_y, _x0:_x1, 1] = np.fromfunction(
-                    lambda x: left_color[1] * (1 - x / length) + right_color[1] * (x / length), (length,))
-                new_img[_y, _x0:_x1, 2] = np.fromfunction(
-                    lambda x: left_color[2] * (1 - x / length) + right_color[2] * (x / length), (length,))
-    # end of x padding
-    # _, _, edges_along_x = edge_detection(new_img, th=5)
-    color = np.mean(img[img.shape[0] // 2, np.argwhere(edges_along_x[:, 0] > 0), :], axis=0)
-    # for _x, (_y0, _y1) in enumerate(edges_along_x):
-    _y0 = np.argwhere(edges_along_y[:, 0] > 0).min()
-    _y1 = np.argwhere(edges_along_y[:, 0] > 0).max()
-    for _x in range(img.shape[1]):
-        if _y0 != 0 and _y1 != img.shape[0]:
-            # appends edges
-            new_img[0, _x, :] = new_img[-1, _x, :] = color
+            if internal:
+                left_edge = np.min(t) - 5
+                right_edge = np.max(t) + 5
+                while img[r, left_edge].sum(-1) <= 5:
+                    left_edge += 1
+                while img[r, right_edge].sum(-1) <= 5:
+                    right_edge -= 1
+                new_img_x = color_grad_2_pts_x(new_img_x, x0=left_edge, x1=right_edge, y=r,
+                                               left_color=new_img_x[r, left_edge],
+                                               right_color=new_img_x[r, right_edge])
+
+    new_img_y = new_img_x.copy().astype(np.float32)
+    for c in range(new_img_y.shape[1]):
+        t = np.argwhere(new_img_y[:, c, :].sum(-1) > 0).flatten()
+        if t.size > 0:
+            left_edge = np.min(t) + 5
+            right_edge = np.max(t) - 5
+            while new_img_y[left_edge, c].sum(-1) <= 5:
+                left_edge -= 1
+            while new_img_y[right_edge, c].sum(-1) <= 5:
+                right_edge += 1
             # left edge
-            length = _y0
-            left_color = new_img[0, _x, :]
-            right_color = new_img[_y0, _x, :]
-            new_img[:_y0, _x, 0] = np.fromfunction(
-                lambda x: left_color[0] * (1 - x / length) + right_color[0] * (x / length), (length,))
-            new_img[:_y0, _x, 1] = np.fromfunction(
-                lambda x: left_color[1] * (1 - x / length) + right_color[1] * (x / length), (length,))
-            new_img[:_y0, _x, 2] = np.fromfunction(
-                lambda x: left_color[2] * (1 - x / length) + right_color[2] * (x / length), (length,))
+            new_img_y = color_grad_2_pts_y(new_img_y, y0=0, y1=left_edge, x=c,
+                                           left_color=new_img_y[left_edge, c] * 0.5 + avg_color * 0.5,
+                                           right_color=new_img_y[left_edge, c])
+            new_img_x = color_grad_2_pts_y(new_img_x, y0=0, y1=left_edge, x=c,
+                                           left_color=new_img_y[left_edge, c] * 0.5 + avg_color * 0.5,
+                                           right_color=new_img_y[left_edge, c])
+
             # right edge
-            length = img.shape[0] - _y1
-            left_color = new_img[_y1, _x, :]
-            right_color = new_img[-1, _x, :]
-            new_img[_y1:, _x, 0] = np.fromfunction(
-                lambda x: left_color[0] * (1 - x / length) + right_color[0] * (x / length), (length,))
-            new_img[_y1:, _x, 1] = np.fromfunction(
-                lambda x: left_color[1] * (1 - x / length) + right_color[1] * (x / length), (length,))
-            new_img[_y1:, _x, 2] = np.fromfunction(
-                lambda x: left_color[2] * (1 - x / length) + right_color[2] * (x / length), (length,))
-            # # internal
-            # length = _y1 - _y0
-            # left_color = new_img[_y0, _x, :]
-            # right_color = new_img[_y1, _x, :]
-            # new_img[_y0:_y1, _x, 0] = np.fromfunction(
-            #     lambda x: left_color[0] * (1 - x / length) + right_color[0] * (x / length), (length,))
-            # new_img[_y0:_y1, _x, 1] = np.fromfunction(
-            #     lambda x: left_color[1] * (1 - x / length) + right_color[1] * (x / length), (length,))
-            # new_img[_y0:_y1, _x, 2] = np.fromfunction(
-            #     lambda x: left_color[2] * (1 - x / length) + right_color[2] * (x / length), (length,))
-    # end of y padding
-    new_img = new_img.round().clip(0, 255).astype(np.uint8)
-    return new_img
+            new_img_y = color_grad_2_pts_y(new_img_y, y0=right_edge, y1=img.shape[0], x=c,
+                                           left_color=new_img_y[right_edge, c, :],
+                                           right_color=new_img_y[right_edge, c, :] * 0.5 + avg_color * 0.5)
+            new_img_x = color_grad_2_pts_y(new_img_x, y0=right_edge, y1=img.shape[0], x=c,
+                                           left_color=new_img_y[right_edge, c, :],
+                                           right_color=new_img_y[right_edge, c, :] * 0.5 + avg_color * 0.5)
+            if internal:
+                left_edge = np.min(t) - 5
+                right_edge = np.max(t) + 5
+                while new_img_y[left_edge, c].sum(-1) <= 5:
+                    left_edge += 1
+                while new_img_y[right_edge, c].sum(-1) <= 5:
+                    right_edge -= 1
+                new_img_y = color_grad_2_pts_y(new_img_y, y0=left_edge, y1=right_edge, x=c,
+                                               left_color=new_img_y[left_edge, c, :],
+                                               right_color=new_img_y[right_edge, c, :] * 0.5 + avg_color * 0.5)
+    img_recover = cv2.addWeighted(new_img_x, 0.5, new_img_y, 0.5, 0)
+    img_recover = img_recover.round().clip(0, 255).astype(np.uint8)
+    img_recover = cv2.cvtColor(img_recover, cv2.COLOR_HSV2BGR)
+    return img_recover
 
 
-def genText(img_path, output_path):
+# def image_expansion(img, internal=False):
+#     # new_img = np.zeros_like(img, dtype=np.float32)
+#     new_img = img.copy().astype(np.float32)
+#     _, edges_along_y, edges_along_x = edge_detection(img, th=5)
+#     color = np.mean(img[np.argwhere(edges_along_y[:, 0] > 0), img.shape[1] // 2, :], axis=0)
+#     for _y, (_x0, _x1) in enumerate(edges_along_y):
+#         if _x0 != 0 and _x1 != img.shape[1]:
+#             # appends edges
+#             new_img[_y, -1, :] = new_img[_y, 0, :] = color
+#             # left edge
+#             length = _x0
+#             left_color = new_img[_y, 0, :]
+#             right_color = new_img[_y, _x0, :]
+#             new_img[_y, :_x0, 0] = np.fromfunction(
+#                 lambda x: left_color[0] * (1 - x / length) + right_color[0] * (x / length), (length,))
+#             new_img[_y, :_x0, 1] = np.fromfunction(
+#                 lambda x: left_color[1] * (1 - x / length) + right_color[1] * (x / length), (length,))
+#             new_img[_y, :_x0, 2] = np.fromfunction(
+#                 lambda x: left_color[2] * (1 - x / length) + right_color[2] * (x / length), (length,))
+#             # right edge
+#             length = img.shape[1] - _x1
+#             left_color = new_img[_y, _x1, :]
+#             right_color = new_img[_y, -1, :]
+#             new_img[_y, _x1:, 0] = np.fromfunction(
+#                 lambda x: left_color[0] * (1 - x / length) + right_color[0] * (x / length), (length,))
+#             new_img[_y, _x1:, 1] = np.fromfunction(
+#                 lambda x: left_color[1] * (1 - x / length) + right_color[1] * (x / length), (length,))
+#             new_img[_y, _x1:, 2] = np.fromfunction(
+#                 lambda x: left_color[2] * (1 - x / length) + right_color[2] * (x / length), (length,))
+#             # internal
+#             if internal:
+#                 length = _x1 - _x0
+#                 left_color = new_img[_y, _x0, :]
+#                 right_color = new_img[_y, _x1, :]
+#                 new_img[_y, _x0:_x1, 0] = np.fromfunction(
+#                     lambda x: left_color[0] * (1 - x / length) + right_color[0] * (x / length), (length,))
+#                 new_img[_y, _x0:_x1, 1] = np.fromfunction(
+#                     lambda x: left_color[1] * (1 - x / length) + right_color[1] * (x / length), (length,))
+#                 new_img[_y, _x0:_x1, 2] = np.fromfunction(
+#                     lambda x: left_color[2] * (1 - x / length) + right_color[2] * (x / length), (length,))
+#     # end of x padding
+#     # _, _, edges_along_x = edge_detection(new_img, th=5)
+#     color = np.mean(img[img.shape[0] // 2, np.argwhere(edges_along_x[:, 0] > 0), :], axis=0)
+#     # for _x, (_y0, _y1) in enumerate(edges_along_x):
+#     _y0 = np.argwhere(edges_along_y[:, 0] > 0).min()
+#     _y1 = np.argwhere(edges_along_y[:, 0] > 0).max()
+#     for _x in range(img.shape[1]):
+#         if _y0 != 0 and _y1 != img.shape[0]:
+#             # appends edges
+#             new_img[0, _x, :] = new_img[-1, _x, :] = color
+#             # left edge
+#             length = _y0
+#             left_color = new_img[0, _x, :]
+#             right_color = new_img[_y0, _x, :]
+#             new_img[:_y0, _x, 0] = np.fromfunction(
+#                 lambda x: left_color[0] * (1 - x / length) + right_color[0] * (x / length), (length,))
+#             new_img[:_y0, _x, 1] = np.fromfunction(
+#                 lambda x: left_color[1] * (1 - x / length) + right_color[1] * (x / length), (length,))
+#             new_img[:_y0, _x, 2] = np.fromfunction(
+#                 lambda x: left_color[2] * (1 - x / length) + right_color[2] * (x / length), (length,))
+#             # right edge
+#             length = img.shape[0] - _y1
+#             left_color = new_img[_y1, _x, :]
+#             right_color = new_img[-1, _x, :]
+#             new_img[_y1:, _x, 0] = np.fromfunction(
+#                 lambda x: left_color[0] * (1 - x / length) + right_color[0] * (x / length), (length,))
+#             new_img[_y1:, _x, 1] = np.fromfunction(
+#                 lambda x: left_color[1] * (1 - x / length) + right_color[1] * (x / length), (length,))
+#             new_img[_y1:, _x, 2] = np.fromfunction(
+#                 lambda x: left_color[2] * (1 - x / length) + right_color[2] * (x / length), (length,))
+#             # # internal
+#             # length = _y1 - _y0
+#             # left_color = new_img[_y0, _x, :]
+#             # right_color = new_img[_y1, _x, :]
+#             # new_img[_y0:_y1, _x, 0] = np.fromfunction(
+#             #     lambda x: left_color[0] * (1 - x / length) + right_color[0] * (x / length), (length,))
+#             # new_img[_y0:_y1, _x, 1] = np.fromfunction(
+#             #     lambda x: left_color[1] * (1 - x / length) + right_color[1] * (x / length), (length,))
+#             # new_img[_y0:_y1, _x, 2] = np.fromfunction(
+#             #     lambda x: left_color[2] * (1 - x / length) + right_color[2] * (x / length), (length,))
+#     # end of y padding
+#     new_img = new_img.round().clip(0, 255).astype(np.uint8)
+#     return new_img
+
+
+def genText(img_path, output_path, size=None, internal=False):
+    assert size is None or (type(size) == tuple and len(size) == 3)
+
     img = cv2.imread(img_path)
-    # 256 * 256 -> 1024*256
-    new_img = np.zeros((256, 512, 3), dtype=np.uint8)
-    new_img[:, (512-256)//2:(512+256)//2, :] = img
-    img = image_expansion(new_img, 'i')
+    if size is None:
+        size = img.shape
+    new_img = np.zeros(size, dtype=np.uint8)
+    new_img[(size[0] - img.shape[0]) // 2:(size[0] + img.shape[0]) // 2,
+    (size[1] - img.shape[1]) // 2:(size[1] + img.shape[1]) // 2, :] = img
+    img = image_expansion_v2(new_img, internal)
     cv2.imwrite(output_path, img)
     return
 
@@ -222,7 +340,7 @@ def main():
     """Ask for input"""
     # img_path = input("Path of image: ")
     img_path = "0.jpg"
-
+    os.chdir(r"C:\Users\KTL\Desktop\FYP-code\\")
     global_start = time()
     """Import constants from config file"""
     configManager = ConfigManager('.\\config.ini')
@@ -254,19 +372,23 @@ def main():
     start_time = time()
     from PRNet.myPRNET import genPRMask
     print("\ttime={:.2f}s".format(time() - start_time))
+
     """END"""
     """Geometry"""
     time_it_wrapper(None, "Generating Geometry")
     """Mask"""
-    time_it_wrapper(genPRMask, "Generating Mask", (os.path.join(DIR_INPUT, img_path), DIR_MASK))
+    time_it_wrapper(genPRMask, "Generating Mask", (os.path.join(DIR_INPUT, img_path), DIR_MASK),
+                    kwargs={'isMask': False})
     """Texture"""
-    time_it_wrapper(genText, "Generating Texture", (
-        os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])), os.path.join(DIR_TEXTURE, TEXTURE_DATA)))
-    # display(os.path.join(DIR_TEXTURE, TEXTURE_DATA))
+    time_it_wrapper(genText, "Generating External Texture", (
+        os.path.join(DIR_MASK, "{}_texture_2.png".format(MASK_DATA[:-4])), os.path.join(DIR_TEXTURE, TEXTURE_DATA),
+        (512, 512, 3), False))
+    # time_it_wrapper(genText, "Generating Internal Texture", (
+    #     os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])),) * 2)
     """Alignment"""
     time_it_wrapper(blender_wrapper, "Alignment",
-                    args=(".\\geometry.blend", ".\\blender_script\\geo.py", INPUT_DATA, TEXTURE_DATA, HAIR_DATA,
-                          MASK_DATA, OUT_DATA, False, False))
+                    args=(".\\new_geometry.blend", ".\\blender_script\\geo.py", INPUT_DATA, TEXTURE_DATA, HAIR_DATA,
+                          MASK_DATA, OUT_DATA, HAIR, False))
     print("Output to: {}".format(os.path.join(os.getcwd(), DIR_OUT, OUT_DATA)))
     print("Total_time: {:.2f}".format(time() - global_start))
     return
