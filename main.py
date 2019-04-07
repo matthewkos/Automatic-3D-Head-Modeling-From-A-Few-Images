@@ -6,6 +6,10 @@ from DataHelper import ConfigManager
 import cv2
 import numpy as np
 from math import sqrt
+import tensorflow as tf
+
+def getTFsess():
+    return tf.Session(config=tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True)))
 
 """ Texture Generation """
 
@@ -367,11 +371,6 @@ def main():
     print("Importing packages: ")
     start_time = time()
     from PRNet.myPRNET import genPRMask
-    import tensorflow as tf
-    def getTFsess():
-        return tf.Session(config=tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True)))
-
-    sess = getTFsess()
     print("\ttime={:.2f}s".format(time() - start_time))
 
     """END"""
@@ -379,7 +378,7 @@ def main():
     time_it_wrapper(None, "Generating Geometry")
     """Mask"""
     time_it_wrapper(genPRMask, "Generating Mask", (os.path.join(DIR_INPUT, img_path), DIR_MASK),
-                    kwargs={'isMask': False, 'sess': sess})
+                    kwargs={'isMask': False})
     """Texture"""
     time_it_wrapper(genText, "Generating External Texture", (
         os.path.join(DIR_MASK, "{}_texture_2.png".format(MASK_DATA[:-4])), os.path.join(DIR_TEXTURE, TEXTURE_DATA),
@@ -388,7 +387,7 @@ def main():
     #     os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])),) * 2)
     """Alignment"""
     time_it_wrapper(blender_wrapper, "Alignment",
-                    args=(".\\geometry.blend", ".\\blender_script\\geo.py", INPUT_DATA, TEXTURE_DATA, HAIR_DATA,
+                    args=(".\\new_geometry.blend", ".\\blender_script\\geo.py", INPUT_DATA, TEXTURE_DATA, HAIR_DATA,
                           MASK_DATA, OUT_DATA, HAIR, False))
     print("Output to: {}".format(os.path.join(os.getcwd(), DIR_OUT, OUT_DATA)))
     print("Total_time: {:.2f}".format(time() - global_start))

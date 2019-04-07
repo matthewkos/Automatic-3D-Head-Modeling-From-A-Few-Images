@@ -416,7 +416,7 @@ class HeadMask_Align:
         ind_bound = np.loadtxt(os.path.join(DIR_KPTS, 'bound.txt')).astype(np.int32)
         kpt_ind = np.loadtxt(os.path.join(DIR_KPTS, 'kpt_ind.txt')).astype(np.int32)  # ntri x 3
         left_ind = np.loadtxt(os.path.join(DIR_KPTS, 'left.txt')).astype(np.int32)
-        fore_ind = np.loadtxt(os.path.join(DIR_KPTS, 'fore_ind.txt')).astype(np.int32)
+        fore_ind = np.loadtxt(os.path.join(DIR_KPTS, 'fore.txt')).astype(np.int32)
         jaw_ind = np.loadtxt(os.path.join(DIR_KPTS, 'jaw.txt')).astype(np.int32)
         neck_ind = np.loadtxt(os.path.join(DIR_KPTS, 'neck.txt')).astype(np.int32)
         ear_ind = np.loadtxt(os.path.join(DIR_KPTS, 'ear.txt')).astype(np.int32)
@@ -539,7 +539,6 @@ class HeadMask_Align:
         Translate face
         """
         transx, transy, transz = self.get_pos(face, head, left_ind, kpt_ind)
-        # TODO: use blender. move
         face[:, 0] += 0
         face[:, 1] += transy
         face[:, 2] += transz
@@ -554,12 +553,8 @@ class HeadMask_Align:
         self.sel_vert(neck_ind, mesh)
         self.sel_vert(ear_ind, mesh)
         bpy.ops.mesh.delete(type='VERT')
-        # TODO :delete ear
-        # sel_vert(ear_ind, mesh)
-        # bpy.ops.mesh.delete(type='VERT')
 
         bpy.ops.mesh.separate(type='MATERIAL')
-
         bpy.data.objects['Object'].name = 'Head'
         bpy.data.meshes[INPUT_DATA[:-4]].name = 'Head-mesh'
         bpy.data.objects['Object.001'].name = 'Face'
