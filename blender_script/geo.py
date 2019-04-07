@@ -420,11 +420,16 @@ class HeadMask_Align:
         jaw_ind = np.loadtxt(os.path.join(DIR_KPTS, 'jaw.txt')).astype(np.int32)
         neck_ind = np.loadtxt(os.path.join(DIR_KPTS, 'neck.txt')).astype(np.int32)
         ear_ind = np.loadtxt(os.path.join(DIR_KPTS, 'ear.txt')).astype(np.int32)
+
+        left_ind += self.FACE_COUNT
+        fore_ind += self.FACE_COUNT
+        jaw_ind += self.FACE_COUNT
+        
         return kpt_ind, left_ind, fore_ind, jaw_ind, ind_bound, neck_ind, ear_ind
 
     def get_scale(self, face, head):
-        P1_REF = 45450#52447 
-        P2_REF = 36100#44683
+        P1_REF = 4545 + self.FACE_COUNT#45450#52447 
+        P2_REF = 361 + self.FACE_COUNT#36100#44683
         P21_REF = 28003
         P22_REF = 27792
         p1 = head[P1_REF - self.FACE_COUNT]
@@ -436,11 +441,11 @@ class HeadMask_Align:
         scal = dis2 / dis1
         return scal
 
-    def get_pos(self, face, head, left_ind, kpt_ind):
+    def get_pos(self, face, head, left_ind, kpt_ind, jaw_ind):
         x = 0
         left = head[left_ind - self.FACE_COUNT]
         left_kpt = face[kpt_ind[14:17]]
-        y = head[51673 - self.FACE_COUNT, 1] - face[kpt_ind[8], 1]
+        y = head[jaw_ind[8] - self.FACE_COUNT, 1] - face[kpt_ind[8], 1]
         z = np.mean(left[:, 2], axis=0) - np.mean(left_kpt[:, 2], axis=0)
         return x, y, z
 
@@ -538,7 +543,7 @@ class HeadMask_Align:
         """
         Translate face
         """
-        transx, transy, transz = self.get_pos(face, head, left_ind, kpt_ind)
+        transx, transy, transz = self.get_pos(face, head, left_ind, kpt_ind, jaw_ind)
         # TODO: use blender. move
         face[:, 0] += 0
         face[:, 1] += transy
