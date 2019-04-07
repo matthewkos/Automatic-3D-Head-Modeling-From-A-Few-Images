@@ -265,7 +265,7 @@ def main():
     # display(os.path.join(DIR_TEXTURE, TEXTURE_DATA))
     """Alignment"""
     time_it_wrapper(blender_wrapper, "Alignment",
-                    args=(".\\geometry.blend", ".\\blender_script\\geo.py", INPUT_DATA, TEXTURE_DATA, HAIR_DATA,
+                    args=(".\\new_geometry.blend", ".\\blender_script\\geo.py", INPUT_DATA, TEXTURE_DATA, HAIR_DATA,
                           MASK_DATA, OUT_DATA, False, False))
     print("Output to: {}".format(os.path.join(os.getcwd(), DIR_OUT, OUT_DATA)))
     print("Total_time: {:.2f}".format(time() - global_start))

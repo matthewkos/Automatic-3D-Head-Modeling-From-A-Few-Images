@@ -556,7 +556,7 @@ class HeadMask_Align:
         self.edge_fit(face, head, mesh, fore_ind, jaw_ind, ind_bound, kpt_ind)
 
         bpy.ops.mesh.select_all(action='DESELECT')
-        self.sel_vert(neck_ind, mesh)
+        # self.sel_vert(neck_ind, mesh)
         self.sel_vert(ear_ind, mesh)
         bpy.ops.mesh.delete(type='VERT')
         # TODO :delete ear
