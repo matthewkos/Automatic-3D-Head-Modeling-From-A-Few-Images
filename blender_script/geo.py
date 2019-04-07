@@ -428,8 +428,8 @@ class HeadMask_Align:
         return kpt_ind, left_ind, fore_ind, jaw_ind, ind_bound, neck_ind, ear_ind
 
     def get_scale(self, face, head):
-        P1_REF = 4545 + self.FACE_COUNT#45450#52447 
-        P2_REF = 361 + self.FACE_COUNT#36100#44683
+        P1_REF = 4545 + self.FACE_COUNT  # 45450#52447
+        P2_REF = 361 + self.FACE_COUNT  # 36100#44683
         P21_REF = 28003
         P22_REF = 27792
         p1 = head[P1_REF - self.FACE_COUNT]
@@ -544,7 +544,6 @@ class HeadMask_Align:
         Translate face
         """
         transx, transy, transz = self.get_pos(face, head, left_ind, kpt_ind, jaw_ind)
-        # TODO: use blender. move
         face[:, 0] += 0
         face[:, 1] += transy
         face[:, 2] += transz
@@ -559,7 +558,6 @@ class HeadMask_Align:
         # self.sel_vert(neck_ind, mesh)
         self.sel_vert(ear_ind, mesh)
         bpy.ops.mesh.delete(type='VERT')
-        # TODO :delete ear
         # sel_vert(ear_ind, mesh)
         # bpy.ops.mesh.delete(type='VERT')
 
