@@ -415,9 +415,9 @@ class HeadMask_Align:
         # DIR_KPTS = 'C:\\Users\\KTL\\Desktop\\FYP-code\\Data\\geometry'
         ind_bound = np.loadtxt(os.path.join(DIR_KPTS, 'bound.txt')).astype(np.int32)
         kpt_ind = np.loadtxt(os.path.join(DIR_KPTS, 'kpt_ind.txt')).astype(np.int32)  # ntri x 3
-        left_ind = np.loadtxt(os.path.join(DIR_KPTS, 'left.txt')).astype(np.int32)
-        fore_ind = np.loadtxt(os.path.join(DIR_KPTS, 'fore_ind.txt')).astype(np.int32)
-        jaw_ind = np.loadtxt(os.path.join(DIR_KPTS, 'jaw.txt')).astype(np.int32)
+        left_ind = np.loadtxt(os.path.join(DIR_KPTS, 'left_ind_new.txt')).astype(np.int32)
+        fore_ind = np.loadtxt(os.path.join(DIR_KPTS, 'fore_ind_new.txt')).astype(np.int32)
+        jaw_ind = np.loadtxt(os.path.join(DIR_KPTS, 'jaw_ind_new.txt')).astype(np.int32)
         neck_ind = np.loadtxt(os.path.join(DIR_KPTS, 'neck.txt')).astype(np.int32)
         ear_ind = np.loadtxt(os.path.join(DIR_KPTS, 'ear.txt')).astype(np.int32)
 
