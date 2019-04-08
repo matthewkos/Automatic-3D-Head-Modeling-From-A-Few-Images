@@ -574,6 +574,19 @@ def main_2():
     print("Time Elapsed {:.2f}".format(time() - start_time))
 
 
+def gen_checker(fname1, fname2, shape1= (256,256,3), shape2=(512,512,3)):
+    img_1 = np.zeros(shape1, np.uint8)
+    img_2 = np.zeros(shape2, np.uint8)
+    off_set = shape2[0]*3//5 - shape1[0]//2
+    for y in range(256):
+        color = np.random.randint(0,255,3, np.uint8)
+        img_1[y,:,:] = color
+        img_2[y+off_set,:,:] = color
+    cv2.imwrite(fname1,img_1)
+    cv2.imwrite(fname2,img_2)
+    return
+
+
 def main_v3():
     start_time = time()
     img_BGR = cv2.imread(r'Data\mask\0test.png')
