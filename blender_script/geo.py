@@ -735,4 +735,18 @@ if __name__ == '__main__':
         color_hair()
         object_mode('Hair')
 
+    # join
+
+    bpy.context.scene.objects.active = bpy.data.objects['Head']
+    for item in bpy.context.copy()['selected_editable_objects']:
+        item.select = False
+    bpy.data.objects['Head'].select = True
+    bpy.data.objects['Face'].select = True
+    bpy.ops.object.join()
+
+    # change viewpoint
+    area = next(area for area in bpy.context.screen.areas if area.type == 'VIEW_3D')
+    space = next(space for space in area.spaces if space.type == 'VIEW_3D')
+    space.viewport_shade = 'TEXTURED'  # set the viewport shading
+
     output(os.path.join(DIR_OUT, OUT_DATA))

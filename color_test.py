@@ -666,7 +666,7 @@ def hsv2bgr(img):
 
 def main_v4():
     start_time = time()
-    img_BGR = cv2.imread(r'Data/mask/0test1.png')
+    img_BGR = cv2.imread(r'Data/mask/0_texture_2.png')
     img = cv2.cvtColor(img_BGR, cv2.COLOR_BGR2HSV).astype(np.float64)
     avg_color = img[np.logical_and(img.sum(-1) > 10, img.sum(-1) < 700)].mean(0)
     maskHSV = cv2.inRange(img, avg_color - np.array([10, 40, 40], dtype=np.float64),

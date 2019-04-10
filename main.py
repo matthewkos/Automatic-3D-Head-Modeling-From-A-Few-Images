@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 from math import sqrt
 import tensorflow as tf
+from scipy import interpolate
 
 
 def getTFsess():
@@ -247,12 +248,79 @@ def genText(img_path, output_path, size=None, internal=False):
     if size is None:
         size = img.shape
     new_img = np.zeros(size, dtype=np.uint8)
-    new_img[(size[0] * 3 // 4 - img.shape[0] // 2):(size[0] * 3 // 4 + img.shape[0] // 2),
+    new_img[(size[0] * 3 // 5 - img.shape[0] // 2):(size[0] * 3 // 5 + img.shape[0] // 2),
     (size[1] - img.shape[1]) // 2:(size[1] + img.shape[1]) // 2, :] = img
-    img = image_expansion_v2(new_img, internal)
+    # img = image_expansion_v2(new_img, internal)
+    img = image_expansion_v3(new_img, internal)
+    # img = new_img
     cv2.imwrite(output_path, img)
     return
 
+
+def image_expansion_v3(new_img, internal):
+    img = cv2.cvtColor(new_img, cv2.COLOR_BGR2HSV).astype(np.float64)
+    avg_color = img[np.logical_and(img.sum(-1) > 10, img.sum(-1) < 700)].mean(0)
+    maskHSV = cv2.inRange(img, avg_color - np.array([10, 40, 40], dtype=np.float64),
+                          avg_color + np.array([20, 30, 50], dtype=np.float64))
+    for i in range(maskHSV.shape[0]):
+        t = maskHSV[i].nonzero()[0].flatten()
+        if t.size > 1:
+            maskHSV[i, t[0]:t[-1]] = 255
+    resultHSV = cv2.bitwise_and(img, img, mask=maskHSV)
+    new_img_x = resultHSV.copy().astype(np.float32)
+    left_edge = np.zeros(img.shape[0], dtype=np.uint32)
+    right_edge = np.full(img.shape[0], img.shape[1], dtype=np.uint32)
+    for _y in range(img.shape[0]):
+        t = np.argwhere(img[_y].sum(-1) > 0).flatten()
+        if t.size > 0:
+            k = 4
+            left_edge[_y] = np.min(t) + k
+            right_edge[_y] = np.max(t) - k
+            k = 1
+            kind = "slinear"
+            x_fit = np.concatenate(([0], np.arange(left_edge[_y], left_edge[_y] + k)), 0)
+            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img_x[_y, left_edge[_y]:left_edge[_y] + k, :]), 0)
+            fl = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
+            x_fit = np.concatenate(([new_img_x.shape[1]], np.arange(right_edge[_y] - k, right_edge[_y])), 0)
+            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img_x[_y, right_edge[_y] - k: right_edge[_y], :]), 0)
+            fr = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
+            new_img_x[_y, :left_edge[_y]] = fl(np.arange(left_edge[_y])).clip(0, 255)
+            new_img_x[_y, right_edge[_y]:] = fr(np.arange(right_edge[_y], new_img_x.shape[1])).clip(0, 255)
+    for _y in range(img.shape[0]):
+        for _x in reversed(range(0, left_edge[_y])):
+            new_img_x[_y, _x] = 0.33 * new_img_x[_y - 1, _x] + 0.34 * new_img_x[_y, _x + 1] + 0.33 * new_img_x[
+                _y + 1, _x]
+        for _x in range(right_edge[_y], new_img_x.shape[1]):
+            new_img_x[_y, _x] = 0.33 * new_img_x[_y - 1, _x] + 0.34 * new_img_x[_y, _x - 1] + 0.33 * new_img_x[
+                _y + 1, _x]
+    # up_edge = np.zeros(img.shape[1], dtype=np.uint32)
+    # down_edge = np.full(img.shape[1], img.shape[0], dtype=np.uint32)
+    # for _x in range(img.shape[1]):
+    #     t = np.argwhere(img[:, _x, :].sum(-1) > 0).flatten()
+    #     if t.size > 0:
+    #         k = 4
+    #         up_edge[_x] = np.min(t) + k
+    #         down_edge[_x] = np.max(t) - k
+    #         k = 1
+    #         kind = "slinear"
+    #         x_fit = np.concatenate(([0], np.arange(up_edge[_x], up_edge[_x] + k)), 0)
+    #         y_fit = np.concatenate((avg_color.reshape(1, 3), new_img_x[up_edge[_x]:up_edge[_x] + k, _x, :]), 0)
+    #         fl = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
+    #         x_fit = np.concatenate(([new_img_x.shape[0]], np.arange(down_edge[_x] - k, down_edge[_x])), 0)
+    #         y_fit = np.concatenate((avg_color.reshape(1, 3), new_img_x[down_edge[_x] - k: down_edge[_x], _x, :]), 0)
+    #         fr = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
+    #         new_img_x[:up_edge[_x], _x] = fl(np.arange(up_edge[_x])).clip(0, 255)
+    #         new_img_x[down_edge[_x]:, _x] = fr(np.arange(down_edge[_x], new_img_x.shape[0])).clip(0, 255)
+    # for _x in range(img.shape[1]):
+    #     for _y in reversed(range(0, up_edge[_x])):
+    #         new_img_x[_y, _x] = 0.33 * new_img_x[_y, _x - 1] + 0.34 * new_img_x[_y + 1, _x] + 0.33 * new_img_x[
+    #             _y, _x + 1]
+    #     for _y in range(down_edge[_x], new_img_x.shape[0]):
+    #         new_img_x[_y, _x] = 0.33 * new_img_x[_y, _x - 1] + 0.34 * new_img_x[_y - 1, _x] + 0.33 * new_img_x[
+    #             _y, _x + 1]
+    img_recover = new_img_x.round().clip(0, 255).astype(np.uint8)
+    img_recover = cv2.cvtColor(img_recover, cv2.COLOR_HSV2BGR)
+    return img_recover
 
 """Call Blender"""
 
