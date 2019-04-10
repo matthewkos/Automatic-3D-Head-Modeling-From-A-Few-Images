@@ -15,7 +15,7 @@ class MeshViewer(pyglet.window.Window):
     def on_resize(self, width, height):
         pyglet.gl.glMatrixMode(pyglet.gl.GL_PROJECTION)
         pyglet.gl.glLoadIdentity()
-        pyglet.gl.gluPerspective(40.0, float(width) / height, 1.0, 100.0)
+        pyglet.gl.gluPerspective(0.0, float(width) / height, 1.0, 100.0)
         pyglet.gl.glEnable(pyglet.gl.GL_DEPTH_TEST)
         pyglet.gl.glMatrixMode(pyglet.gl.GL_MODELVIEW)
         return True

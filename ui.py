@@ -1,4 +1,5 @@
 import PySimpleGUI as sg
+import concurrent.futures
 import os
 import shutil
 import pyglet
@@ -69,6 +70,12 @@ if __name__ == '__main__':
     # TODO: Confirm the default INPUT and OUTPUT
     DEFAULT_OUTPUT = os.path.abspath(".\\" + DIR_OUT + "\\" + OUT_DATA)
     
+    # Menu Frame Layout
+    # Menu Definition
+    menu_bar_def = [['&File', ['&Open', '&Save', '---', 'Properties', 'E&xit'  ]],      
+                ['&Edit', ['Paste', ['Special', 'Normal',], 'Undo'],],      
+                ['&Help', '&About...'],]    
+
     # Input Frame Layout
     input_frame_layout = [
          [sg.Text('Input Image Path:', size=(15, 1)), sg.Text(DEFAULT_INPUT, key='_IMG_PATH_DISPLAY_', size=(45, 1))],
@@ -95,10 +102,11 @@ if __name__ == '__main__':
 
     # Main Layout 
     layout = [
-        [sg.Frame('Input', input_frame_layout, size=(15, 2), title_color='blue', key="_INPUT_FRAME_", visible=True)],
-        [sg.Frame('Input Preview', input_preview_frame_layout, size=(15, 2), title_color='blue', key="_IMG_PREVIEW_FRAME_", visible=False)],
-        [sg.Frame('Generation Control', generation_panel_frame_layout, size=(15, 2), title_color='blue', key="_GENERATION_CONTROL_FRAME_", visible=True)],
-        [sg.Frame('3D Model Preview', model_preview_frame_layout, size=(15, 2), title_color='blue', key="_MODEL_PREVIEW_FRAME_", visible=True)],
+        [sg.Menu(menu_bar_def)],
+        [sg.Frame('Input', input_frame_layout, size=(15, 2), title_color='black', key="_INPUT_FRAME_", visible=True)],
+        [sg.Frame('Input Preview', input_preview_frame_layout, size=(15, 2), title_color='black', key="_IMG_PREVIEW_FRAME_", visible=False)],
+        [sg.Frame('Generation Control', generation_panel_frame_layout, size=(15, 2), title_color='black', key="_GENERATION_CONTROL_FRAME_", visible=True)],
+        [sg.Frame('3D Model Preview', model_preview_frame_layout, size=(15, 2), title_color='black', key="_MODEL_PREVIEW_FRAME_", visible=True)],
         [sg.Button('Exit')]
     ]
 
@@ -155,16 +163,15 @@ if __name__ == '__main__':
                 window_main.FindElement('_IMG_PATH_').Update(current_img_path)
                 # Show another window for the 2D frontal image
                 window_main.FindElement('_IMG_PATH_DISPLAY_').Update(display_img_path)
-                # imageViewer = ImageViewer(filename_input=display_img_path)
-                # imageViewer.run()
-
                 window_main.FindElement('_IMAGE_PREVIEW_').Update(filename=display_img_path, size=(UI_DISPLAY_WIDTH,UI_DISPLAY_HEIGHT), visible=True)
                 window_main.FindElement('_IMG_PREVIEW_FRAME_').Update(visible=True)
             except Exception as err:
+                # Display the error by popup window
                 errmsg = str(err)
                 if len(errmsg) > 100:
                     errmsg = errmsg[:100] +"\n" + errmsg[100:]
                 sg.PopupError(errmsg)
+
         elif event == 'Generate':
             if current_img_path == "":
                 # use default image if user does not input a path before
@@ -178,8 +185,6 @@ if __name__ == '__main__':
             print("Relative image path:", relative_current_img_path)
 
             # Update config.ini
-
-
 
             if values["_full_model_radio_"]:
                 # Generate complete model
