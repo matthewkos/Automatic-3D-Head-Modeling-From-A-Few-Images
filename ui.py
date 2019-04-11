@@ -48,27 +48,30 @@ if __name__ == '__main__':
     UI_DISPLAY_HEIGHT = json_data["UI_DISPLAY_HEIGHT"]
     del json_data    
 
-    ##################################################
-    # Setup
-    warnings.filterwarnings("ignore")
-    print("Importing packages: ")
-    start_time = time()
-    try:
-        from PRNet.myPRNET import genPRMask
-    except Exception as err:
-        print(err)
-        print("Cannot import PRNet. Please install all required packages in requirement.txt.")
-        print("pip install -r requirement.txt")
-    print("\ttime={:.2f}s".format(time() - start_time))
+    #################### Setup #######################
+    
+    # warnings.filterwarnings("ignore")
+    # print("Importing packages: ")
+    # start_time = time()
+    # try:
+    #     from PRNet.myPRNET import genPRMask
+    # except Exception as err:
+    #     print(err)
+    #     print("Cannot import PRNet. Please install all required packages in requirement.txt.")
+    #     print("pip install -r requirement.txt")
+    # print("\ttime={:.2f}s".format(time() - start_time))
+
     # create tensorflow sess
-    sess = tf.Session(config=tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True)))
+    # sess = tf.Session(config=tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True)))
     ##################################################
 
-    sg.ChangeLookAndFeel('DarkBlue')
+    sg.ChangeLookAndFeel('Black')
     DEFAULT_INPUT = os.path.abspath(".\\" + DIR_INPUT + "\\" + INPUT_DATA)
     DEFAULT_INPUT_DISPLAY = os.path.abspath(".\\" + DIR_INPUT + "\\" + INPUT_DATA.replace('.jpg', '.png'))
     # TODO: Confirm the default INPUT and OUTPUT
     DEFAULT_OUTPUT = os.path.abspath(".\\" + DIR_OUT + "\\" + OUT_DATA)
+    DEFAULT_HEAD_OUTPUT = None
+    DEFAULT_HAIR_OUTPUT = None
     
     # Menu Frame Layout
     # Menu Definition
@@ -78,39 +81,50 @@ if __name__ == '__main__':
 
     # Input Frame Layout
     input_frame_layout = [
-         [sg.Text('Input Image Path:', size=(15, 1)), sg.Text(DEFAULT_INPUT, key='_IMG_PATH_DISPLAY_', size=(45, 1))],
-        [sg.Text('2D Frontal Image ', size=(15, 1)), sg.InputText(DEFAULT_INPUT, key='_IMG_PATH_'), sg.FileBrowse()],
-        [sg.Button('Preview')]
+        [sg.Text('Input Image Path:', size=(20, 1)), sg.Text(DEFAULT_INPUT, key='_IMG_PATH_DISPLAY_', size=(50, 1))],
+        [sg.Text('2D Frontal Image ', size=(20, 1)), sg.InputText(DEFAULT_INPUT, size=(50, 1), key='_IMG_PATH_'), sg.FileBrowse()],
+        [sg.Button('Preview'), sg.Button('Close', key='_close_preview_image_')]
+    ]
+
+    hairstyle_preview_frame_layout = [
+        [sg.Image(filename=DEFAULT_INPUT_DISPLAY ,size=(UI_DISPLAY_WIDTH,UI_DISPLAY_HEIGHT), key='_HAIR_PREVIEW_1_', visible=True),],
+        [sg.Slider((1,50),  key='_HAIRSTYLE_PREVIEW_SLIDER_', orientation='h', enable_events=True, disable_number_display=False, size=(5,10), font=("Helvetica", 10))]
     ]
 
     # Image Frame Layout
     input_preview_frame_layout = [
-                  [sg.Image(filename=DEFAULT_INPUT_DISPLAY ,size=(UI_DISPLAY_WIDTH,UI_DISPLAY_HEIGHT), key='_IMAGE_PREVIEW_', visible=False)],      
-               ]  
+        [sg.Image(filename=DEFAULT_INPUT_DISPLAY ,size=(UI_DISPLAY_WIDTH,UI_DISPLAY_HEIGHT), key='_IMAGE_PREVIEW_', visible=True)],
+    ]  
 
+
+  
     # Generation Panel Frame Layout
     generation_panel_frame_layout =[
-        [sg.Radio('Full Model', group_id="Generation_Setting", key="_full_model_radio_", default=True), sg.Radio('Head Only', group_id="Generation_Setting", key="_head_only_radio_"), sg.Radio('Hair Only', group_id="Generation_Setting", key="_hair_only_radio_")],
+        [sg.Radio('Full Model', group_id="Generation_Setting", key="_full_model_radio_", default=True), ],
+        [sg.Radio('Head Only', group_id="Generation_Setting", key="_head_only_radio_", size=(10, 1)), ],
+        [sg.Radio('Hair Only', group_id="Generation_Setting", key="_hair_only_radio_", size=(10, 1)), ],
+        [sg.Text('Hair Model (.obj) File Path:', size=(20, 1)), sg.InputText(DEFAULT_HAIR_OUTPUT, size=(50, 1), key='_HAIR_OBJ_PATH_'), sg.FileBrowse()],
+        [sg.Text('Head Model (.obj) File Path:', size=(20, 1)), sg.InputText(DEFAULT_HEAD_OUTPUT, size=(50, 1), key='_HEAD_OBJ_PATH_'), sg.FileBrowse()],
         [sg.Button('Generate')]
     ]  
 
     model_preview_frame_layout = [
         [sg.Text('Output 3D Head .obj File Path:'), sg.Text('', key='_OBJ_PATH_DISPLAY_', size=(45, 1))],
-        [sg.Text('3D Head WaveFront ', size=(15, 1)), sg.InputText(DEFAULT_OUTPUT, key='_OBJ_PATH_'), sg.FileBrowse()],
+        [sg.Text('3D Head WaveFront ', size=(20, 1)), sg.InputText(DEFAULT_OUTPUT, size=(50, 1), key='_OBJ_PATH_'), sg.FileBrowse()],
         [sg.Button('Show 3D model')]
     ]
 
     # Main Layout 
     layout = [
         [sg.Menu(menu_bar_def)],
-        [sg.Frame('Input', input_frame_layout, size=(15, 2), title_color='black', key="_INPUT_FRAME_", visible=True)],
-        [sg.Frame('Input Preview', input_preview_frame_layout, size=(15, 2), title_color='black', key="_IMG_PREVIEW_FRAME_", visible=False)],
-        [sg.Frame('Generation Control', generation_panel_frame_layout, size=(15, 2), title_color='black', key="_GENERATION_CONTROL_FRAME_", visible=True)],
-        [sg.Frame('3D Model Preview', model_preview_frame_layout, size=(15, 2), title_color='black', key="_MODEL_PREVIEW_FRAME_", visible=True)],
-        [sg.Button('Exit')]
-    ]
+        [sg.Frame('Input', input_frame_layout,title_color='white', key="_INPUT_FRAME_", visible=True),sg.Frame('Input Preview', input_preview_frame_layout,title_color='white', key="_IMG_PREVIEW_FRAME_", visible=True),],
+        [sg.Frame('Generation Control', generation_panel_frame_layout, title_color='white', key="_GENERATION_CONTROL_FRAME_", visible=True), sg.Frame('Hairstyle Preview', hairstyle_preview_frame_layout, title_color='white'),],
+        [sg.Frame('3D Model Preview', model_preview_frame_layout, title_color='white', key="_MODEL_PREVIEW_FRAME_", visible=True)],
 
-    window_main = sg.Window('Automatic Head Modelling').Layout(layout)
+    ]
+    # default window size = (698, 426)
+    window_main = sg.Window('Automatic Head Modelling',size=(850, 500), icon='Data\\ui_images\\icon.ico',auto_size_text=True, auto_size_buttons=True, resizable=True, grab_anywhere=False,).Layout(layout)
+    
     imageViewer_active = False
 
     current_img_path = ''
@@ -171,7 +185,13 @@ if __name__ == '__main__':
                 if len(errmsg) > 100:
                     errmsg = errmsg[:100] +"\n" + errmsg[100:]
                 sg.PopupError(errmsg)
+        elif event == '_close_preview_image_':
+            window_main.FindElement('_IMG_PREVIEW_FRAME_').Update(visible=False)
 
+        elif event == '_HAIRSTYLE_PREVIEW_SLIDER_':
+            # Slide to change hairstyle preview images
+            slider_value = values['_HAIRSTYLE_PREVIEW_SLIDER_']
+            window_main.FindElement('_HAIR_PREVIEW_1_').Update('Data\\ui_images\\hair_2.png')
         elif event == 'Generate':
             if current_img_path == "":
                 # use default image if user does not input a path before
@@ -193,7 +213,7 @@ if __name__ == '__main__':
                 time_it_wrapper(None, "Generating Geometry")
                 """Mask"""
                 time_it_wrapper(genPRMask, "Generating Mask", (relative_current_img_path, DIR_MASK),
-                                kwargs={'isMask': False, 'sess': sess})
+                                kwargs={'isMask': False})
                 """Texture"""
                 time_it_wrapper(genText, "Generating Texture", (
                     os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])),
