@@ -17,143 +17,144 @@ def getTFsess():
 """ Texture Generation """
 
 
-def edge_detection(img, th=10):
-    """
-    detect the edge
-    :param img: source image
-    :param th: threshold to decide what is black
-    :return: grad, edge_along_y, edge_along_x
-    """
-    src = img.copy()
-    gray = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
-    grad_x = cv2.convertScaleAbs(
-        cv2.Sobel(gray, cv2.CV_16S, 1, 0, ksize=1, scale=1, delta=0, borderType=cv2.BORDER_DEFAULT))
-    grad_y = cv2.convertScaleAbs(
-        cv2.Sobel(gray, cv2.CV_16S, 0, 1, ksize=1, scale=1, delta=0, borderType=cv2.BORDER_DEFAULT))
-    grad = cv2.addWeighted(grad_x, 0.5, grad_y, 0.5, 0)
-    edge_along_y = np.zeros((img.shape[0], 2), dtype=np.uint16)
-    edge_along_x = np.zeros((img.shape[1], 2), dtype=np.uint16)
-    for _y in range(edge_along_y.shape[0]):
-        temp = np.argwhere(grad_x[_y, :] > th)
-        if np.any(temp):
-            edge_along_y[_y, 0] = np.min(temp) + 1
-            edge_along_y[_y, 1] = np.max(temp) - 1
-    for _x in range(edge_along_x.shape[0]):
-        temp = np.argwhere(grad_x[:, _x] > th)
-        if np.any(temp):
-            edge_along_x[_x, 0] = np.min(temp) + 1
-            edge_along_x[_x, 1] = np.max(temp) - 1
-    return grad, edge_along_y, edge_along_x
+#
+# def edge_detection(img, th=10):
+#     """
+#     detect the edge
+#     :param img: source image
+#     :param th: threshold to decide what is black
+#     :return: grad, edge_along_y, edge_along_x
+#     """
+#     src = img.copy()
+#     gray = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
+#     grad_x = cv2.convertScaleAbs(
+#         cv2.Sobel(gray, cv2.CV_16S, 1, 0, ksize=1, scale=1, delta=0, borderType=cv2.BORDER_DEFAULT))
+#     grad_y = cv2.convertScaleAbs(
+#         cv2.Sobel(gray, cv2.CV_16S, 0, 1, ksize=1, scale=1, delta=0, borderType=cv2.BORDER_DEFAULT))
+#     grad = cv2.addWeighted(grad_x, 0.5, grad_y, 0.5, 0)
+#     edge_along_y = np.zeros((img.shape[0], 2), dtype=np.uint16)
+#     edge_along_x = np.zeros((img.shape[1], 2), dtype=np.uint16)
+#     for _y in range(edge_along_y.shape[0]):
+#         temp = np.argwhere(grad_x[_y, :] > th)
+#         if np.any(temp):
+#             edge_along_y[_y, 0] = np.min(temp) + 1
+#             edge_along_y[_y, 1] = np.max(temp) - 1
+#     for _x in range(edge_along_x.shape[0]):
+#         temp = np.argwhere(grad_x[:, _x] > th)
+#         if np.any(temp):
+#             edge_along_x[_x, 0] = np.min(temp) + 1
+#             edge_along_x[_x, 1] = np.max(temp) - 1
+#     return grad, edge_along_y, edge_along_x
+#
+#
+# def color_grad_2_pts_x(img, x0, x1, y, left_color, right_color):
+#     length = x1 - x0
+#     img[y, x0:x1, 0] = np.fromfunction(
+#         lambda x: left_color[0] * (1 - x / length) + right_color[0] * (x / length), (length,))
+#     img[y, x0:x1, 1] = np.fromfunction(
+#         lambda x: left_color[1] * (1 - x / length) + right_color[1] * (x / length), (length,))
+#     img[y, x0:x1, 2] = np.fromfunction(
+#         lambda x: left_color[2] * (1 - x / length) + right_color[2] * (x / length), (length,))
+#     return img
+#
+#
+# def color_grad_2_pts_y(img, y0, y1, x, left_color, right_color):
+#     length = y1 - y0
+#     img[y0:y1, x, 0] = np.fromfunction(
+#         lambda _x: left_color[0] * (1 - _x / length) + right_color[0] * (_x / length), (length,))
+#     img[y0:y1, x, 1] = np.fromfunction(
+#         lambda _x: left_color[1] * (1 - _x / length) + right_color[1] * (_x / length), (length,))
+#     img[y0:y1, x, 2] = np.fromfunction(
+#         lambda _x: left_color[2] * (1 - _x / length) + right_color[2] * (_x / length), (length,))
+#     return img
 
-
-def color_grad_2_pts_x(img, x0, x1, y, left_color, right_color):
-    length = x1 - x0
-    img[y, x0:x1, 0] = np.fromfunction(
-        lambda x: left_color[0] * (1 - x / length) + right_color[0] * (x / length), (length,))
-    img[y, x0:x1, 1] = np.fromfunction(
-        lambda x: left_color[1] * (1 - x / length) + right_color[1] * (x / length), (length,))
-    img[y, x0:x1, 2] = np.fromfunction(
-        lambda x: left_color[2] * (1 - x / length) + right_color[2] * (x / length), (length,))
-    return img
-
-
-def color_grad_2_pts_y(img, y0, y1, x, left_color, right_color):
-    length = y1 - y0
-    img[y0:y1, x, 0] = np.fromfunction(
-        lambda _x: left_color[0] * (1 - _x / length) + right_color[0] * (_x / length), (length,))
-    img[y0:y1, x, 1] = np.fromfunction(
-        lambda _x: left_color[1] * (1 - _x / length) + right_color[1] * (_x / length), (length,))
-    img[y0:y1, x, 2] = np.fromfunction(
-        lambda _x: left_color[2] * (1 - _x / length) + right_color[2] * (_x / length), (length,))
-    return img
-
-
-def image_expansion_v2(img, internal=False):
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV).astype(np.float64)
-    if internal:
-        img[:, :, 2] *= 1.2
-        img[:, :, 1] *= 0.8
-    avg_color = img[img.sum(-1) > 0].mean(0)
-    maskHSV = cv2.inRange(img, avg_color - np.array([10, 40, 25]), avg_color + np.array([10, 100, 50]))
-    for i in range(maskHSV.shape[0]):
-        t = maskHSV[i].nonzero()[0].flatten()
-        if t.size > 1:
-            maskHSV[i, t[0]:t[-1]] = 255
-    resultHSV = cv2.bitwise_and(img, img, mask=maskHSV)
-
-    new_img_x = resultHSV.copy().astype(np.float32)
-    img = resultHSV
-    for r in range(img.shape[0]):
-        t = np.argwhere(img[r].sum(-1) > 0).flatten()
-        if t.size > 0:
-            left_edge = np.min(t) + 5
-            right_edge = np.max(t) - 5
-
-            while img[r, left_edge].sum(-1) <= 5:
-                left_edge -= 1
-            while img[r, right_edge].sum(-1) <= 5:
-                right_edge += 1
-            # left edge
-            new_img_x = color_grad_2_pts_x(new_img_x, x0=0, x1=left_edge, y=r,
-                                           left_color=img[r, left_edge] * 0.5 + avg_color * 0.5,
-                                           right_color=img[r, left_edge])
-
-            # right edge
-            new_img_x = color_grad_2_pts_x(new_img_x, x0=right_edge, x1=img.shape[1], y=r,
-                                           left_color=img[r, right_edge, :],
-                                           right_color=img[r, right_edge, :] * 0.5 + avg_color * 0.5)
-
-            # internal
-            if internal:
-                left_edge = np.min(t) - 5
-                right_edge = np.max(t) + 5
-                while img[r, left_edge].sum(-1) <= 5:
-                    left_edge += 1
-                while img[r, right_edge].sum(-1) <= 5:
-                    right_edge -= 1
-                new_img_x = color_grad_2_pts_x(new_img_x, x0=left_edge, x1=right_edge, y=r,
-                                               left_color=new_img_x[r, left_edge],
-                                               right_color=new_img_x[r, right_edge])
-
-    new_img_y = new_img_x.copy().astype(np.float32)
-    for c in range(new_img_y.shape[1]):
-        t = np.argwhere(new_img_y[:, c, :].sum(-1) > 0).flatten()
-        if t.size > 0:
-            left_edge = np.min(t) + 5
-            right_edge = np.max(t) - 5
-            while new_img_y[left_edge, c].sum(-1) <= 5:
-                left_edge -= 1
-            while new_img_y[right_edge, c].sum(-1) <= 5:
-                right_edge += 1
-            # left edge
-            new_img_y = color_grad_2_pts_y(new_img_y, y0=0, y1=left_edge, x=c,
-                                           left_color=new_img_y[left_edge, c] * 0.5 + avg_color * 0.5,
-                                           right_color=new_img_y[left_edge, c])
-            new_img_x = color_grad_2_pts_y(new_img_x, y0=0, y1=left_edge, x=c,
-                                           left_color=new_img_y[left_edge, c] * 0.5 + avg_color * 0.5,
-                                           right_color=new_img_y[left_edge, c])
-
-            # right edge
-            new_img_y = color_grad_2_pts_y(new_img_y, y0=right_edge, y1=img.shape[0], x=c,
-                                           left_color=new_img_y[right_edge, c, :],
-                                           right_color=new_img_y[right_edge, c, :] * 0.5 + avg_color * 0.5)
-            new_img_x = color_grad_2_pts_y(new_img_x, y0=right_edge, y1=img.shape[0], x=c,
-                                           left_color=new_img_y[right_edge, c, :],
-                                           right_color=new_img_y[right_edge, c, :] * 0.5 + avg_color * 0.5)
-            if internal:
-                left_edge = np.min(t) - 5
-                right_edge = np.max(t) + 5
-                while new_img_y[left_edge, c].sum(-1) <= 5:
-                    left_edge += 1
-                while new_img_y[right_edge, c].sum(-1) <= 5:
-                    right_edge -= 1
-                new_img_y = color_grad_2_pts_y(new_img_y, y0=left_edge, y1=right_edge, x=c,
-                                               left_color=new_img_y[left_edge, c, :],
-                                               right_color=new_img_y[right_edge, c, :] * 0.5 + avg_color * 0.5)
-    img_recover = cv2.addWeighted(new_img_x, 0.5, new_img_y, 0.5, 0)
-    img_recover = img_recover.round().clip(0, 255).astype(np.uint8)
-    img_recover = cv2.cvtColor(img_recover, cv2.COLOR_HSV2BGR)
-    return img_recover
+#
+# def image_expansion_v2(img, internal=False):
+#     img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV).astype(np.float64)
+#     if internal:
+#         img[:, :, 2] *= 1.2
+#         img[:, :, 1] *= 0.8
+#     avg_color = img[img.sum(-1) > 0].mean(0)
+#     maskHSV = cv2.inRange(img, avg_color - np.array([10, 40, 25]), avg_color + np.array([10, 100, 50]))
+#     for i in range(maskHSV.shape[0]):
+#         t = maskHSV[i].nonzero()[0].flatten()
+#         if t.size > 1:
+#             maskHSV[i, t[0]:t[-1]] = 255
+#     resultHSV = cv2.bitwise_and(img, img, mask=maskHSV)
+#
+#     new_img_x = resultHSV.copy().astype(np.float32)
+#     img = resultHSV
+#     for r in range(img.shape[0]):
+#         t = np.argwhere(img[r].sum(-1) > 0).flatten()
+#         if t.size > 0:
+#             left_edge = np.min(t) + 5
+#             right_edge = np.max(t) - 5
+#
+#             while img[r, left_edge].sum(-1) <= 5:
+#                 left_edge -= 1
+#             while img[r, right_edge].sum(-1) <= 5:
+#                 right_edge += 1
+#             # left edge
+#             new_img_x = color_grad_2_pts_x(new_img_x, x0=0, x1=left_edge, y=r,
+#                                            left_color=img[r, left_edge] * 0.5 + avg_color * 0.5,
+#                                            right_color=img[r, left_edge])
+#
+#             # right edge
+#             new_img_x = color_grad_2_pts_x(new_img_x, x0=right_edge, x1=img.shape[1], y=r,
+#                                            left_color=img[r, right_edge, :],
+#                                            right_color=img[r, right_edge, :] * 0.5 + avg_color * 0.5)
+#
+#             # internal
+#             if internal:
+#                 left_edge = np.min(t) - 5
+#                 right_edge = np.max(t) + 5
+#                 while img[r, left_edge].sum(-1) <= 5:
+#                     left_edge += 1
+#                 while img[r, right_edge].sum(-1) <= 5:
+#                     right_edge -= 1
+#                 new_img_x = color_grad_2_pts_x(new_img_x, x0=left_edge, x1=right_edge, y=r,
+#                                                left_color=new_img_x[r, left_edge],
+#                                                right_color=new_img_x[r, right_edge])
+#
+#     new_img_y = new_img_x.copy().astype(np.float32)
+#     for c in range(new_img_y.shape[1]):
+#         t = np.argwhere(new_img_y[:, c, :].sum(-1) > 0).flatten()
+#         if t.size > 0:
+#             left_edge = np.min(t) + 5
+#             right_edge = np.max(t) - 5
+#             while new_img_y[left_edge, c].sum(-1) <= 5:
+#                 left_edge -= 1
+#             while new_img_y[right_edge, c].sum(-1) <= 5:
+#                 right_edge += 1
+#             # left edge
+#             new_img_y = color_grad_2_pts_y(new_img_y, y0=0, y1=left_edge, x=c,
+#                                            left_color=new_img_y[left_edge, c] * 0.5 + avg_color * 0.5,
+#                                            right_color=new_img_y[left_edge, c])
+#             new_img_x = color_grad_2_pts_y(new_img_x, y0=0, y1=left_edge, x=c,
+#                                            left_color=new_img_y[left_edge, c] * 0.5 + avg_color * 0.5,
+#                                            right_color=new_img_y[left_edge, c])
+#
+#             # right edge
+#             new_img_y = color_grad_2_pts_y(new_img_y, y0=right_edge, y1=img.shape[0], x=c,
+#                                            left_color=new_img_y[right_edge, c, :],
+#                                            right_color=new_img_y[right_edge, c, :] * 0.5 + avg_color * 0.5)
+#             new_img_x = color_grad_2_pts_y(new_img_x, y0=right_edge, y1=img.shape[0], x=c,
+#                                            left_color=new_img_y[right_edge, c, :],
+#                                            right_color=new_img_y[right_edge, c, :] * 0.5 + avg_color * 0.5)
+#             if internal:
+#                 left_edge = np.min(t) - 5
+#                 right_edge = np.max(t) + 5
+#                 while new_img_y[left_edge, c].sum(-1) <= 5:
+#                     left_edge += 1
+#                 while new_img_y[right_edge, c].sum(-1) <= 5:
+#                     right_edge -= 1
+#                 new_img_y = color_grad_2_pts_y(new_img_y, y0=left_edge, y1=right_edge, x=c,
+#                                                left_color=new_img_y[left_edge, c, :],
+#                                                right_color=new_img_y[right_edge, c, :] * 0.5 + avg_color * 0.5)
+#     img_recover = cv2.addWeighted(new_img_x, 0.5, new_img_y, 0.5, 0)
+#     img_recover = img_recover.round().clip(0, 255).astype(np.uint8)
+#     img_recover = cv2.cvtColor(img_recover, cv2.COLOR_HSV2BGR)
+#     return img_recover
 
 
 # def image_expansion(img, internal=False):
@@ -331,12 +332,8 @@ def image_expansion_execute(img_BGR):
                 _y, _x + 1]
     out_img = new_img.round().clip(0, 255).astype(np.uint8)
     out_img_BGR = hsv2bgr(out_img)
-    display(np.concatenate((img_BGR, hsv2bgr(masked_HSV), out_img_BGR), axis=1))
+    # display(np.concatenate((img_BGR, hsv2bgr(masked_HSV), out_img_BGR), axis=1))
     return out_img_BGR
-
-
-def hsv2bgr(img):
-    return cv2.cvtColor(img.clip(0, 255).astype(np.uint8), cv2.COLOR_HSV2BGR)
 
 
 """Call Blender"""
@@ -385,8 +382,11 @@ def blender_wrapper(blender_file, script_file_path, input_data, texture, hair, m
 """Utility"""
 
 
-def dist(pt1, pt2):
-    return sqrt((pt1[0] - pt2[0]) ** 2 + (pt1[1] - pt2[1]) ** 2)
+# def dist(pt1, pt2):
+#     return sqrt((pt1[0] - pt2[0]) ** 2 + (pt1[1] - pt2[1]) ** 2)
+
+def hsv2bgr(img):
+    return cv2.cvtColor(img.clip(0, 255).astype(np.uint8), cv2.COLOR_HSV2BGR)
 
 
 def display(img, name="Img", time=0, encode="BGR"):
@@ -403,10 +403,6 @@ def display(img, name="Img", time=0, encode="BGR"):
     cv2.imshow(name, img)
     cv2.waitKey(time)
     cv2.destroyAllWindows()
-
-
-def clear_all_output():
-    pass
 
 
 def time_it_wrapper(callback, name="", args=(), kwargs={}):
@@ -467,7 +463,7 @@ def main():
     time_it_wrapper(genPRMask, "Generating Mask", args=(
         os.path.join(DIR_INPUT, img_path),
         DIR_MASK),
-        kwargs={'isMask': False})
+                    kwargs={'isMask': False})
     """Texture"""
     time_it_wrapper(genText, "Generating External Texture", args=(
         os.path.join(DIR_MASK, "{}_texture_2.png".format(MASK_DATA[:-4])),
