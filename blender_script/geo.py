@@ -322,10 +322,11 @@ def gen_hair(file_name):
     return
 
 
-def import_test_head():
+def import_test_head(file_loc = None):
     scene = bpy.context.scene
     scene.objects.active = None
-    file_loc = OBJ_HEAD_MODEL_HAIR
+    if file_loc is None:
+        file_loc = OBJ_HEAD_MODEL_HAIR
     imported_object = bpy.ops.import_scene.obj(filepath=file_loc)
     bpy.context.selected_objects[0].name = "Head"
     bpy.ops.transform.rotate(value=-1.5708, axis=(1, 0, 0), constraint_axis=(True, False, False),

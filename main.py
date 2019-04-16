@@ -241,86 +241,103 @@ def image_expansion_v2(img, internal=False):
 #     return new_img
 
 
-def genText(img_path, output_path, size=None, internal=False):
+def genText(img_path, output_head_path, output_mask_path, size=None):
     assert size is None or (type(size) == tuple and len(size) == 3)
 
     img = cv2.imread(img_path)
     if size is None:
         size = img.shape
     new_img = np.zeros(size, dtype=np.uint8)
-    new_img[(size[0] * 3 // 5 - img.shape[0] // 2):(size[0] * 3 // 5 + img.shape[0] // 2),
-    (size[1] - img.shape[1]) // 2:(size[1] + img.shape[1]) // 2, :] = img
-    # img = image_expansion_v2(new_img, internal)
-    img = image_expansion_v3(new_img, internal)
-    # img = new_img
-    cv2.imwrite(output_path, img)
+    internal = (
+        (size[0] * 3 // 5 - img.shape[0] // 2), (size[0] * 3 // 5 + img.shape[0] // 2), (size[1] - img.shape[1]) // 2,
+        (size[1] + img.shape[1]) // 2)
+    new_img[internal[0]:internal[1], internal[2]:internal[3], :] = img
+    img = image_expansion_execute(new_img)
+    cv2.imwrite(output_head_path, img)
+    img_mask = img[internal[0]:internal[1], internal[2]:internal[3], :].copy()
+    cv2.imwrite(output_mask_path, img_mask)
     return
 
 
-def image_expansion_v3(new_img, internal):
-    img = cv2.cvtColor(new_img, cv2.COLOR_BGR2HSV).astype(np.float64)
-    avg_color = img[np.logical_and(img.sum(-1) > 10, img.sum(-1) < 700)].mean(0)
-    maskHSV = cv2.inRange(img, avg_color - np.array([10, 40, 40], dtype=np.float64),
-                          avg_color + np.array([20, 30, 50], dtype=np.float64))
+def image_expansion_execute(img_BGR):
+    img_HSV = cv2.cvtColor(img_BGR, cv2.COLOR_BGR2HSV).astype(np.float64)
+    avg_color = img_HSV[np.logical_and(img_HSV.sum(-1) > 10, img_HSV.sum(-1) < 700)].mean(0)
+    maskHSV = cv2.inRange(img_HSV, avg_color - np.array([5, 30, 30], dtype=np.float64),
+                          avg_color + np.array([10, 25, 25], dtype=np.float64))
     for i in range(maskHSV.shape[0]):
         t = maskHSV[i].nonzero()[0].flatten()
         if t.size > 1:
             maskHSV[i, t[0]:t[-1]] = 255
-    resultHSV = cv2.bitwise_and(img, img, mask=maskHSV)
-    new_img_x = resultHSV.copy().astype(np.float32)
-    left_edge = np.zeros(img.shape[0], dtype=np.uint32)
-    right_edge = np.full(img.shape[0], img.shape[1], dtype=np.uint32)
-    for _y in range(img.shape[0]):
-        t = np.argwhere(img[_y].sum(-1) > 0).flatten()
+    masked_HSV = cv2.bitwise_and(img_HSV, img_HSV, mask=maskHSV)
+    # set img
+    new_img = masked_HSV.copy().astype(np.float32)
+    left_edge = np.zeros(masked_HSV.shape[0], dtype=np.uint32)
+    right_edge = np.full(masked_HSV.shape[0], img_HSV.shape[1], dtype=np.uint32)
+    for _y in range(masked_HSV.shape[0]):
+        t = np.argwhere(masked_HSV[_y].sum(-1) > 0).flatten()
         if t.size > 0:
             k = 4
             left_edge[_y] = np.min(t) + k
             right_edge[_y] = np.max(t) - k
+            kind = "slinear"
+            x_fit = np.concatenate(([left_edge[_y] // 2], np.arange(left_edge[_y], left_edge[_y] + k)), 0)
+            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img[_y, left_edge[_y]:left_edge[_y] + k, :]), 0)
+            fl = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
+            x_fit = np.concatenate(
+                ([(new_img.shape[1] + right_edge[_y]) // 2], np.arange(right_edge[_y] - k, right_edge[_y])), 0)
+            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img[_y, right_edge[_y] - k: right_edge[_y], :]), 0)
+            fr = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
+            new_img[_y, left_edge[_y] // 2:left_edge[_y], :] = fl(np.arange(left_edge[_y] // 2, left_edge[_y])).clip(0,
+                                                                                                                     255)
+            new_img[_y, right_edge[_y]:(new_img.shape[1] + right_edge[_y]) // 2, :] = fr(
+                np.arange(right_edge[_y], (new_img.shape[1] + right_edge[_y]) // 2)).clip(0, 255)
+            new_img[_y, :left_edge[_y] // 2, :] = avg_color
+            new_img[_y, (new_img.shape[1] + right_edge[_y]) // 2:, :] = avg_color
+    for _y in range(new_img.shape[0] - 1):
+        for _x in reversed(range(0, left_edge[_y])):
+            new_img[_y, _x] = 0.33 * new_img[_y - 1, _x] + 0.34 * new_img[_y, _x + 1] + 0.33 * new_img[
+                _y + 1, _x]
+        for _x in range(right_edge[_y], new_img.shape[1]):
+            new_img[_y, _x] = 0.33 * new_img[_y - 1, _x] + 0.34 * new_img[_y, _x - 1] + 0.33 * new_img[
+                _y + 1, _x]
+    up_edge = np.zeros(img_HSV.shape[1], dtype=np.uint32)
+    down_edge = np.full(img_HSV.shape[1], img_HSV.shape[0], dtype=np.uint32)
+    for _x in range(img_HSV.shape[1]):
+        t = np.argwhere(new_img[:, _x, :].sum(-1) > 0).flatten()
+        if t.size > 0:
+            k = 4
+            up_edge[_x] = np.min(t) + k
+            down_edge[_x] = np.max(t) - k
             k = 1
             kind = "slinear"
-            x_fit = np.concatenate(([0], np.arange(left_edge[_y], left_edge[_y] + k)), 0)
-            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img_x[_y, left_edge[_y]:left_edge[_y] + k, :]), 0)
+            x_fit = np.concatenate(([up_edge[_x] // 2], np.arange(up_edge[_x], up_edge[_x] + k)), 0)
+            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img[up_edge[_x]:up_edge[_x] + k, _x, :]), 0)
             fl = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
-            x_fit = np.concatenate(([new_img_x.shape[1]], np.arange(right_edge[_y] - k, right_edge[_y])), 0)
-            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img_x[_y, right_edge[_y] - k: right_edge[_y], :]), 0)
+            x_fit = np.concatenate(
+                ([(new_img.shape[1] + down_edge[_x]) // 2], np.arange(down_edge[_x] - k, down_edge[_x])), 0)
+            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img[down_edge[_x] - k: down_edge[_x], _x, :]), 0)
             fr = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
-            new_img_x[_y, :left_edge[_y]] = fl(np.arange(left_edge[_y])).clip(0, 255)
-            new_img_x[_y, right_edge[_y]:] = fr(np.arange(right_edge[_y], new_img_x.shape[1])).clip(0, 255)
-    for _y in range(img.shape[0]):
-        for _x in reversed(range(0, left_edge[_y])):
-            new_img_x[_y, _x] = 0.33 * new_img_x[_y - 1, _x] + 0.34 * new_img_x[_y, _x + 1] + 0.33 * new_img_x[
-                _y + 1, _x]
-        for _x in range(right_edge[_y], new_img_x.shape[1]):
-            new_img_x[_y, _x] = 0.33 * new_img_x[_y - 1, _x] + 0.34 * new_img_x[_y, _x - 1] + 0.33 * new_img_x[
-                _y + 1, _x]
-    # up_edge = np.zeros(img.shape[1], dtype=np.uint32)
-    # down_edge = np.full(img.shape[1], img.shape[0], dtype=np.uint32)
-    # for _x in range(img.shape[1]):
-    #     t = np.argwhere(img[:, _x, :].sum(-1) > 0).flatten()
-    #     if t.size > 0:
-    #         k = 4
-    #         up_edge[_x] = np.min(t) + k
-    #         down_edge[_x] = np.max(t) - k
-    #         k = 1
-    #         kind = "slinear"
-    #         x_fit = np.concatenate(([0], np.arange(up_edge[_x], up_edge[_x] + k)), 0)
-    #         y_fit = np.concatenate((avg_color.reshape(1, 3), new_img_x[up_edge[_x]:up_edge[_x] + k, _x, :]), 0)
-    #         fl = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
-    #         x_fit = np.concatenate(([new_img_x.shape[0]], np.arange(down_edge[_x] - k, down_edge[_x])), 0)
-    #         y_fit = np.concatenate((avg_color.reshape(1, 3), new_img_x[down_edge[_x] - k: down_edge[_x], _x, :]), 0)
-    #         fr = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
-    #         new_img_x[:up_edge[_x], _x] = fl(np.arange(up_edge[_x])).clip(0, 255)
-    #         new_img_x[down_edge[_x]:, _x] = fr(np.arange(down_edge[_x], new_img_x.shape[0])).clip(0, 255)
-    # for _x in range(img.shape[1]):
-    #     for _y in reversed(range(0, up_edge[_x])):
-    #         new_img_x[_y, _x] = 0.33 * new_img_x[_y, _x - 1] + 0.34 * new_img_x[_y + 1, _x] + 0.33 * new_img_x[
-    #             _y, _x + 1]
-    #     for _y in range(down_edge[_x], new_img_x.shape[0]):
-    #         new_img_x[_y, _x] = 0.33 * new_img_x[_y, _x - 1] + 0.34 * new_img_x[_y - 1, _x] + 0.33 * new_img_x[
-    #             _y, _x + 1]
-    img_recover = new_img_x.round().clip(0, 255).astype(np.uint8)
-    img_recover = cv2.cvtColor(img_recover, cv2.COLOR_HSV2BGR)
-    return img_recover
+            new_img[up_edge[_x] // 2:up_edge[_x], _x, :] = fl(np.arange(up_edge[_x] // 2, up_edge[_x])).clip(0, 255)
+            new_img[down_edge[_x]:(new_img.shape[0] + down_edge[_y]) // 2, _x, :] = fr(
+                np.arange(down_edge[_x], (new_img.shape[0] + down_edge[_y]) // 2)).clip(0, 255)
+            new_img[:up_edge[_x] // 2, _x, :] = avg_color
+            new_img[(new_img.shape[0] + down_edge[_x]) // 2:, _x, :] = avg_color
+    for _x in range(new_img.shape[1] - 1):
+        for _y in reversed(range(0, up_edge[_x])):
+            new_img[_y, _x] = 0.33 * new_img[_y, _x - 1] + 0.34 * new_img[_y + 1, _x] + 0.33 * new_img[
+                _y, _x + 1]
+        for _y in range(down_edge[_x], new_img.shape[0]):
+            new_img[_y, _x] = 0.33 * new_img[_y, _x - 1] + 0.34 * new_img[_y - 1, _x] + 0.33 * new_img[
+                _y, _x + 1]
+    out_img = new_img.round().clip(0, 255).astype(np.uint8)
+    out_img_BGR = hsv2bgr(out_img)
+    display(np.concatenate((img_BGR, hsv2bgr(masked_HSV), out_img_BGR), axis=1))
+    return out_img_BGR
+
+
+def hsv2bgr(img):
+    return cv2.cvtColor(img.clip(0, 255).astype(np.uint8), cv2.COLOR_HSV2BGR)
+
 
 """Call Blender"""
 
@@ -447,18 +464,28 @@ def main():
     """Geometry"""
     time_it_wrapper(None, "Generating Geometry")
     """Mask"""
-    # time_it_wrapper(genPRMask, "Generating Mask", (os.path.join(DIR_INPUT, img_path), DIR_MASK),
-    #                 kwargs={'isMask': False})
+    time_it_wrapper(genPRMask, "Generating Mask", args=(
+        os.path.join(DIR_INPUT, img_path),
+        DIR_MASK),
+        kwargs={'isMask': False})
     """Texture"""
-    time_it_wrapper(genText, "Generating External Texture", (
-        os.path.join(DIR_MASK, "{}_texture_2.png".format(MASK_DATA[:-4])), os.path.join(DIR_TEXTURE, TEXTURE_DATA),
-        (512, 512, 3), False))
-    # time_it_wrapper(genText, "Generating Internal Texture", (
-    #     os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])),) * 2)
+    time_it_wrapper(genText, "Generating External Texture", args=(
+        os.path.join(DIR_MASK, "{}_texture_2.png".format(MASK_DATA[:-4])),
+        os.path.join(DIR_TEXTURE, TEXTURE_DATA),
+        os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])),
+        (512, 512, 3)
+    ))
     """Alignment"""
-    # time_it_wrapper(blender_wrapper, "Alignment",
-    #                 args=(".\\new_geometry.blend", ".\\blender_script\\geo.py", INPUT_DATA, TEXTURE_DATA, HAIR_DATA,
-    #                       MASK_DATA, OUT_DATA, HAIR, False))
+    time_it_wrapper(blender_wrapper, "Alignment", args=(
+        ".\\new_geometry.blend",
+        ".\\blender_script\\geo.py",
+        INPUT_DATA,
+        TEXTURE_DATA,
+        HAIR_DATA,
+        MASK_DATA,
+        OUT_DATA,
+        HAIR,
+        False))
     print("Output to: {}".format(os.path.join(os.getcwd(), DIR_OUT, OUT_DATA)))
     print("Total_time: {:.2f}".format(time() - global_start))
     return
