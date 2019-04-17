@@ -24,7 +24,7 @@ def view_selected_index():
     """
     obj = bpy.context.object
     bm = bmesh.from_edit_mesh(obj.data)
-    verts = [v for v in bm.verts if v.select]
+    verts = [v.index for v in bm.verts if v.select]
     return verts
 
 
@@ -179,8 +179,8 @@ def apply_head_sub():
 
 def get_upper_head_abs(matrix_world):
     # matrix_world = head.matrix_world
-    Y_REF = 573
-    Z_REF = 573
+    Y_REF = 987
+    Z_REF = 987
     head = select('Head')
     bm = bmesh.new()
     bm.from_object(head, get_scene())
@@ -322,10 +322,11 @@ def gen_hair(file_name):
     return
 
 
-def import_test_head():
+def import_test_head(file_loc = None):
     scene = bpy.context.scene
     scene.objects.active = None
-    file_loc = OBJ_HEAD_MODEL_HAIR
+    if file_loc is None:
+        file_loc = OBJ_HEAD_MODEL_HAIR
     imported_object = bpy.ops.import_scene.obj(filepath=file_loc)
     bpy.context.selected_objects[0].name = "Head"
     bpy.ops.transform.rotate(value=-1.5708, axis=(1, 0, 0), constraint_axis=(True, False, False),
@@ -694,8 +695,6 @@ if __name__ == '__main__':
     print("WS: ", os.getcwd())
     with open('.\config.ini', 'r') as json_file:
         json_data = json.load(json_file)
-        # for (k, v) in json_data.items():
-        #     exec("{} = {}".format(k, v))
         OBJ_HEAD_MODEL_HAIR = json_data["OBJ_HEAD_MODEL_HAIR"]
         DIR_INPUT = json_data["DIR_INPUT"]
         DIR_TEXTURE = json_data["DIR_TEXTURE"]
@@ -734,5 +733,21 @@ if __name__ == '__main__':
         modify_hair()
         color_hair()
         object_mode('Hair')
+
+    # join
+
+    bpy.context.scene.objects.active = bpy.data.objects['Head']
+    for item in bpy.context.copy()['selected_editable_objects']:
+        item.select = False
+    bpy.data.objects['Head'].select = True
+    bpy.data.objects['Face'].select = True
+    # if HAIR:
+        # bpy.data.objects['Hair'].select = True
+    bpy.ops.object.join()
+
+    # change viewpoint
+    area = next(area for area in bpy.context.screen.areas if area.type == 'VIEW_3D')
+    space = next(space for space in area.spaces if space.type == 'VIEW_3D')
+    space.viewport_shade = 'TEXTURED'  # set the viewport shading
 
     output(os.path.join(DIR_OUT, OUT_DATA))

@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from time import time
 from math import sqrt
+from scipy import interpolate
 
 
 def color_gradient_v4(img, edges_x):
@@ -573,6 +574,19 @@ def main_2():
     print("Time Elapsed {:.2f}".format(time() - start_time))
 
 
+def gen_checker(fname1, fname2, shape1=(256, 256, 3), shape2=(512, 512, 3)):
+    img_1 = np.zeros(shape1, np.uint8)
+    img_2 = np.zeros(shape2, np.uint8)
+    off_set = shape2[0] * 3 // 5 - shape1[0] // 2
+    for y in range(256):
+        color = np.random.randint(0, 255, 3, np.uint8)
+        img_1[y, :, :] = color
+        img_2[y + off_set, :, :] = color
+    cv2.imwrite(fname1, img_1)
+    cv2.imwrite(fname2, img_2)
+    return
+
+
 def main_v3():
     start_time = time()
     img_BGR = cv2.imread(r'Data\mask\0test.png')
@@ -595,6 +609,470 @@ def main_v3():
     resultHSV = cv2.cvtColor(resultHSV.astype(np.uint8), cv2.COLOR_HSV2BGR)
     display(np.concatenate((img_BGR, resultHSV), axis=1))
     print("Time Elapsed {:.2f}".format(time() - start_time))
+
+
+def difference(n):
+    """
+
+    :param n: np.array of shape 5,,x
+    :return: fd,sd
+    """
+    assert n.ndim == 2
+    length = n.shape[0]
+    depth = n.shape[1]
+    assert length > 2
+    fd = np.zeros((length - 1, depth), dtype=np.float64)
+    sd = np.zeros((length - 2, depth), dtype=np.float64)
+    for i in range(length - 1):
+        fd[i, :] = n[i + 1, :] - n[i, :]
+    for i in range(length - 2):
+        sd[i, :] = fd[i + 1, :] - fd[i, :]
+    return fd, sd
+
+
+def image_expansion_v4(img, avg_color):
+    new_img_x = img.copy().astype(np.float32)
+    left_edge = np.zeros(img.shape[0], dtype=np.uint32)
+    right_edge = np.full(img.shape[0], img.shape[1], dtype=np.uint32)
+    for _y in range(img.shape[0]):
+        t = np.argwhere(img[_y].sum(-1) > 0).flatten()
+        if t.size > 0:
+            k = 4
+            left_edge[_y] = np.min(t) + k
+            right_edge[_y] = np.max(t) - k
+            k = 1
+            kind = "slinear"
+            x_fit = np.concatenate(([0], np.arange(left_edge[_y], left_edge[_y] + k)), 0)
+            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img_x[_y, left_edge[_y]:left_edge[_y] + k, :]), 0)
+            fl = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
+            x_fit = np.concatenate(([new_img_x.shape[1]], np.arange(right_edge[_y] - k, right_edge[_y])), 0)
+            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img_x[_y, right_edge[_y] - k: right_edge[_y], :]), 0)
+            fr = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
+            new_img_x[_y, :left_edge[_y]] = fl(np.arange(left_edge[_y])).clip(0, 255)
+            new_img_x[_y, right_edge[_y]:] = fr(np.arange(right_edge[_y], new_img_x.shape[1])).clip(0, 255)
+    for _y in range(img.shape[0]):
+        for _x in reversed(range(0, left_edge[_y])):
+            new_img_x[_y, _x] = 0.33 * new_img_x[_y - 1, _x] + 0.34 * new_img_x[_y, _x + 1] + 0.33 * new_img_x[
+                _y + 1, _x]
+        for _x in range(right_edge[_y], new_img_x.shape[1]):
+            new_img_x[_y, _x] = 0.33 * new_img_x[_y - 1, _x] + 0.34 * new_img_x[_y, _x - 1] + 0.33 * new_img_x[
+                _y + 1, _x]
+    return new_img_x
+
+
+def hsv2bgr(img):
+    return cv2.cvtColor(img.clip(0, 255).astype(np.uint8), cv2.COLOR_HSV2BGR)
+
+
+def main_v4():
+    start_time = time()
+    img_BGR = cv2.imread(r'Data/mask/0_texture_2.png')
+    img = cv2.cvtColor(img_BGR, cv2.COLOR_BGR2HSV).astype(np.float64)
+    avg_color = img[np.logical_and(img.sum(-1) > 10, img.sum(-1) < 700)].mean(0)
+    maskHSV = cv2.inRange(img, avg_color - np.array([10, 40, 40], dtype=np.float64),
+                          avg_color + np.array([20, 30, 50], dtype=np.float64))
+    for i in range(maskHSV.shape[0]):
+        t = maskHSV[i].nonzero()[0].flatten()
+        if t.size > 1:
+            maskHSV[i, t[0]:t[-1]] = 255
+    resultHSV = cv2.bitwise_and(img, img, mask=maskHSV)
+    img = image_expansion_v4(resultHSV, avg_color)
+    display(np.concatenate((img_BGR, hsv2bgr(resultHSV), hsv2bgr(img)), axis=1))
+
+
+def m1():
+    img_BGR = cv2.imread(r'Data/mask/0_texture_2.png')
+    img_HSV = cv2.cvtColor(img_BGR, cv2.COLOR_BGR2HSV).astype(np.float64)
+    avg_color = img_HSV[np.logical_and(img_HSV.sum(-1) > 10, img_HSV.sum(-1) < 700)].mean(0)
+    maskHSV = cv2.inRange(img_HSV, avg_color - np.array([10, 40, 40], dtype=np.float64),
+                          avg_color + np.array([20, 30, 50], dtype=np.float64))
+    for i in range(maskHSV.shape[0]):
+        t = maskHSV[i].nonzero()[0].flatten()
+        if t.size > 1:
+            maskHSV[i, t[0]:t[-1]] = 255
+    masked_HSV = cv2.bitwise_and(img_HSV, img_HSV, mask=maskHSV)
+    # set img
+    new_img = img_HSV.copy().astype(np.float32)
+    left_edge = np.zeros(img_HSV.shape[0], dtype=np.uint32)
+    right_edge = np.full(img_HSV.shape[0], img_HSV.shape[1], dtype=np.uint32)
+    for _y in range(img_HSV.shape[0]):
+        t = np.argwhere(img_HSV[_y].sum(-1) > 0).flatten()
+        if t.size > 0:
+            k = 4
+            left_edge[_y] = np.min(t) + k
+            right_edge[_y] = np.max(t) - k
+            new_img[_y, :left_edge[_y]] = avg_color
+            new_img[_y, right_edge[_y]:] = avg_color
+    up_edge = np.zeros(img_HSV.shape[1], dtype=np.uint32)
+    down_edge = np.full(img_HSV.shape[1], img_HSV.shape[0], dtype=np.uint32)
+    for _x in range(img_HSV.shape[1]):
+        t = np.argwhere(new_img[:, _x, :].sum(-1) > 0).flatten()
+        if t.size > 0:
+            k = 4
+            up_edge[_x] = np.min(t) + k
+            down_edge[_x] = np.max(t) - k
+            new_img[:up_edge[_x], _x, :] = avg_color
+            new_img[down_edge[_x]:, _x, :] = avg_color
+    out_img = new_img.round().clip(0, 255).astype(np.uint8)
+    out_img_BGR = hsv2bgr(out_img)
+    display(np.concatenate((img_BGR, out_img_BGR), axis=1))
+    return
+
+
+def m2():
+    img_BGR = cv2.imread(r'Data/mask/0_texture_2.png')
+    img_HSV = cv2.cvtColor(img_BGR, cv2.COLOR_BGR2HSV).astype(np.float64)
+    avg_color = img_HSV[np.logical_and(img_HSV.sum(-1) > 10, img_HSV.sum(-1) < 700)].mean(0)
+    maskHSV = cv2.inRange(img_HSV, avg_color - np.array([10, 40, 40], dtype=np.float64),
+                          avg_color + np.array([20, 30, 50], dtype=np.float64))
+    for i in range(maskHSV.shape[0]):
+        t = maskHSV[i].nonzero()[0].flatten()
+        if t.size > 1:
+            maskHSV[i, t[0]:t[-1]] = 255
+    masked_HSV = cv2.bitwise_and(img_HSV, img_HSV, mask=maskHSV)
+    # set img
+    new_img = img_HSV.copy().astype(np.float32)
+    left_edge = np.zeros(img_HSV.shape[0], dtype=np.uint32)
+    right_edge = np.full(img_HSV.shape[0], img_HSV.shape[1], dtype=np.uint32)
+    for _y in range(img_HSV.shape[0]):
+        t = np.argwhere(img_HSV[_y].sum(-1) > 0).flatten()
+        if t.size > 0:
+            k = 4
+            left_edge[_y] = np.min(t) + k
+            right_edge[_y] = np.max(t) - k
+            new_img[_y, :left_edge[_y]] = new_img[_y, left_edge[_y]]
+            new_img[_y, right_edge[_y]:] = new_img[_y, right_edge[_y]]
+    up_edge = np.zeros(img_HSV.shape[1], dtype=np.uint32)
+    down_edge = np.full(img_HSV.shape[1], img_HSV.shape[0], dtype=np.uint32)
+    for _x in range(img_HSV.shape[1]):
+        t = np.argwhere(new_img[:, _x, :].sum(-1) > 0).flatten()
+        if t.size > 0:
+            k = 4
+            up_edge[_x] = np.min(t) + k
+            down_edge[_x] = np.max(t) - k
+            new_img[:up_edge[_x], _x, :] = new_img[up_edge[_x], _x, :]
+            new_img[down_edge[_x]:, _x, :] = new_img[down_edge[_x], _x, :]
+    out_img = new_img.round().clip(0, 255).astype(np.uint8)
+    out_img_BGR = hsv2bgr(out_img)
+    display(np.concatenate((img_BGR, out_img_BGR), axis=1))
+    return
+
+
+def m3():
+    img_BGR = cv2.imread(r'Data/mask/0_texture_2.png')
+    img_HSV = cv2.cvtColor(img_BGR, cv2.COLOR_BGR2HSV).astype(np.float64)
+    avg_color = img_HSV[np.logical_and(img_HSV.sum(-1) > 10, img_HSV.sum(-1) < 700)].mean(0)
+    maskHSV = cv2.inRange(img_HSV, avg_color - np.array([10, 40, 40], dtype=np.float64),
+                          avg_color + np.array([20, 30, 50], dtype=np.float64))
+    for i in range(maskHSV.shape[0]):
+        t = maskHSV[i].nonzero()[0].flatten()
+        if t.size > 1:
+            maskHSV[i, t[0]:t[-1]] = 255
+    masked_HSV = cv2.bitwise_and(img_HSV, img_HSV, mask=maskHSV)
+    # set img
+    new_img = masked_HSV.copy().astype(np.float32)
+    left_edge = np.zeros(masked_HSV.shape[0], dtype=np.uint32)
+    right_edge = np.full(masked_HSV.shape[0], img_HSV.shape[1], dtype=np.uint32)
+    for _y in range(masked_HSV.shape[0]):
+        t = np.argwhere(masked_HSV[_y].sum(-1) > 0).flatten()
+        if t.size > 0:
+            k = 4
+            left_edge[_y] = np.min(t) + k
+            right_edge[_y] = np.max(t) - k
+            new_img[_y, :left_edge[_y]] = new_img[_y, left_edge[_y]]
+            new_img[_y, right_edge[_y]:] = new_img[_y, right_edge[_y]]
+    up_edge = np.zeros(img_HSV.shape[1], dtype=np.uint32)
+    down_edge = np.full(img_HSV.shape[1], img_HSV.shape[0], dtype=np.uint32)
+    for _x in range(img_HSV.shape[1]):
+        t = np.argwhere(new_img[:, _x, :].sum(-1) > 0).flatten()
+        if t.size > 0:
+            k = 4
+            up_edge[_x] = np.min(t) + k
+            down_edge[_x] = np.max(t) - k
+            new_img[:up_edge[_x], _x, :] = new_img[up_edge[_x], _x, :]
+            new_img[down_edge[_x]:, _x, :] = new_img[down_edge[_x], _x, :]
+    out_img = new_img.round().clip(0, 255).astype(np.uint8)
+    out_img_BGR = hsv2bgr(out_img)
+    display(np.concatenate((img_BGR, out_img_BGR), axis=1))
+    return
+
+
+def m4():
+    img_BGR = cv2.imread(r'Data/mask/0_texture_2.png')
+    img_HSV = cv2.cvtColor(img_BGR, cv2.COLOR_BGR2HSV).astype(np.float64)
+    avg_color = img_HSV[np.logical_and(img_HSV.sum(-1) > 10, img_HSV.sum(-1) < 700)].mean(0)
+    maskHSV = cv2.inRange(img_HSV, avg_color - np.array([10, 40, 40], dtype=np.float64),
+                          avg_color + np.array([20, 30, 50], dtype=np.float64))
+    for i in range(maskHSV.shape[0]):
+        t = maskHSV[i].nonzero()[0].flatten()
+        if t.size > 1:
+            maskHSV[i, t[0]:t[-1]] = 255
+    masked_HSV = cv2.bitwise_and(img_HSV, img_HSV, mask=maskHSV)
+    # set img
+    new_img = masked_HSV.copy().astype(np.float32)
+    left_edge = np.zeros(masked_HSV.shape[0], dtype=np.uint32)
+    right_edge = np.full(masked_HSV.shape[0], img_HSV.shape[1], dtype=np.uint32)
+    for _y in range(masked_HSV.shape[0]):
+        t = np.argwhere(masked_HSV[_y].sum(-1) > 0).flatten()
+        if t.size > 0:
+            k = 4
+            left_edge[_y] = np.min(t) + k
+            right_edge[_y] = np.max(t) - k
+            kind = "slinear"
+            x_fit = np.concatenate(([0], np.arange(left_edge[_y], left_edge[_y] + k)), 0)
+            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img[_y, left_edge[_y]:left_edge[_y] + k, :]), 0)
+            fl = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
+            x_fit = np.concatenate(([new_img.shape[1]], np.arange(right_edge[_y] - k, right_edge[_y])), 0)
+            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img[_y, right_edge[_y] - k: right_edge[_y], :]), 0)
+            fr = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
+            new_img[_y, :left_edge[_y]] = fl(np.arange(left_edge[_y])).clip(0, 255)
+            new_img[_y, right_edge[_y]:] = fr(np.arange(right_edge[_y], new_img.shape[1])).clip(0, 255)
+    up_edge = np.zeros(img_HSV.shape[1], dtype=np.uint32)
+    down_edge = np.full(img_HSV.shape[1], img_HSV.shape[0], dtype=np.uint32)
+    for _x in range(img_HSV.shape[1]):
+        t = np.argwhere(new_img[:, _x, :].sum(-1) > 0).flatten()
+        if t.size > 0:
+            k = 4
+            up_edge[_x] = np.min(t) + k
+            down_edge[_x] = np.max(t) - k
+            k = 1
+            kind = "slinear"
+            x_fit = np.concatenate(([0], np.arange(up_edge[_x], up_edge[_x] + k)), 0)
+            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img[up_edge[_x]:up_edge[_x] + k, _x, :]), 0)
+            fl = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
+            x_fit = np.concatenate(([new_img.shape[1]], np.arange(down_edge[_x] - k, down_edge[_x])), 0)
+            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img[down_edge[_x] - k: down_edge[_x], _x, :]), 0)
+            fr = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
+            new_img[:up_edge[_x], _x, :] = fl(np.arange(up_edge[_x])).clip(0, 255)
+            new_img[down_edge[_x]:, _x, :] = fr(np.arange(down_edge[_x], new_img.shape[0])).clip(0, 255)
+    out_img = new_img.round().clip(0, 255).astype(np.uint8)
+    out_img_BGR = hsv2bgr(out_img)
+    display(np.concatenate((img_BGR, out_img_BGR), axis=1))
+    return
+
+
+def m5():
+    img_BGR = cv2.imread(r'Data/mask/0_texture_2.png')
+    img_HSV = cv2.cvtColor(img_BGR, cv2.COLOR_BGR2HSV).astype(np.float64)
+    avg_color = img_HSV[np.logical_and(img_HSV.sum(-1) > 10, img_HSV.sum(-1) < 700)].mean(0)
+    maskHSV = cv2.inRange(img_HSV, avg_color - np.array([10, 40, 40], dtype=np.float64),
+                          avg_color + np.array([20, 30, 50], dtype=np.float64))
+    for i in range(maskHSV.shape[0]):
+        t = maskHSV[i].nonzero()[0].flatten()
+        if t.size > 1:
+            maskHSV[i, t[0]:t[-1]] = 255
+    masked_HSV = cv2.bitwise_and(img_HSV, img_HSV, mask=maskHSV)
+    # set img
+    new_img = masked_HSV.copy().astype(np.float32)
+    left_edge = np.zeros(masked_HSV.shape[0], dtype=np.uint32)
+    right_edge = np.full(masked_HSV.shape[0], img_HSV.shape[1], dtype=np.uint32)
+    for _y in range(masked_HSV.shape[0]):
+        t = np.argwhere(masked_HSV[_y].sum(-1) > 0).flatten()
+        if t.size > 0:
+            k = 4
+            left_edge[_y] = np.min(t) + k
+            right_edge[_y] = np.max(t) - k
+            kind = "slinear"
+            x_fit = np.concatenate(([left_edge[_y] // 2], np.arange(left_edge[_y], left_edge[_y] + k)), 0)
+            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img[_y, left_edge[_y]:left_edge[_y] + k, :]), 0)
+            fl = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
+            x_fit = np.concatenate(
+                ([(new_img.shape[1] + right_edge[_y]) // 2], np.arange(right_edge[_y] - k, right_edge[_y])), 0)
+            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img[_y, right_edge[_y] - k: right_edge[_y], :]), 0)
+            fr = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
+            new_img[_y, :left_edge[_y]] = fl(np.arange(left_edge[_y])).clip(0, 255)
+            new_img[_y, right_edge[_y]:] = fr(np.arange(right_edge[_y], new_img.shape[1])).clip(0, 255)
+    for _y in range(new_img.shape[0] - 1):
+        for _x in reversed(range(0, left_edge[_y])):
+            new_img[_y, _x] = 0.33 * new_img[_y - 1, _x] + 0.34 * new_img[_y, _x + 1] + 0.33 * new_img[
+                _y + 1, _x]
+        for _x in range(right_edge[_y], new_img.shape[1]):
+            new_img[_y, _x] = 0.33 * new_img[_y - 1, _x] + 0.34 * new_img[_y, _x - 1] + 0.33 * new_img[
+                _y + 1, _x]
+    up_edge = np.zeros(img_HSV.shape[1], dtype=np.uint32)
+    down_edge = np.full(img_HSV.shape[1], img_HSV.shape[0], dtype=np.uint32)
+    for _x in range(img_HSV.shape[1]):
+        t = np.argwhere(new_img[:, _x, :].sum(-1) > 0).flatten()
+        if t.size > 0:
+            k = 4
+            up_edge[_x] = np.min(t) + k
+            down_edge[_x] = np.max(t) - k
+            k = 1
+            kind = "slinear"
+            x_fit = np.concatenate(([up_edge[_x] // 2], np.arange(up_edge[_x], up_edge[_x] + k)), 0)
+            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img[up_edge[_x]:up_edge[_x] + k, _x, :]), 0)
+            fl = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
+            x_fit = np.concatenate(
+                ([(new_img.shape[1] + down_edge[_x]) // 2], np.arange(down_edge[_x] - k, down_edge[_x])), 0)
+            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img[down_edge[_x] - k: down_edge[_x], _x, :]), 0)
+            fr = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
+            new_img[:up_edge[_x], _x, :] = fl(np.arange(up_edge[_x])).clip(0, 255)
+            new_img[down_edge[_x]:, _x, :] = fr(np.arange(down_edge[_x], new_img.shape[0])).clip(0, 255)
+    for _x in range(new_img.shape[1] - 1):
+        for _y in reversed(range(0, up_edge[_x])):
+            new_img[_y, _x] = 0.33 * new_img[_y, _x - 1] + 0.34 * new_img[_y + 1, _x] + 0.33 * new_img[
+                _y, _x + 1]
+        for _y in range(down_edge[_x], new_img.shape[0]):
+            new_img[_y, _x] = 0.33 * new_img[_y, _x - 1] + 0.34 * new_img[_y - 1, _x] + 0.33 * new_img[
+                _y, _x + 1]
+    out_img = new_img.round().clip(0, 255).astype(np.uint8)
+    out_img_BGR = hsv2bgr(out_img)
+    display(np.concatenate((img_BGR, out_img_BGR), axis=1))
+    return
+
+
+def m6():
+    img_BGR = cv2.imread(r'Data/mask/0_texture_2.png')
+    img_HSV = cv2.cvtColor(img_BGR, cv2.COLOR_BGR2HSV).astype(np.float64)
+    avg_color = img_HSV[np.logical_and(img_HSV.sum(-1) > 10, img_HSV.sum(-1) < 700)].mean(0)
+    maskHSV = cv2.inRange(img_HSV, avg_color - np.array([10, 40, 40], dtype=np.float64),
+                          avg_color + np.array([20, 30, 50], dtype=np.float64))
+    for i in range(maskHSV.shape[0]):
+        t = maskHSV[i].nonzero()[0].flatten()
+        if t.size > 1:
+            maskHSV[i, t[0]:t[-1]] = 255
+    masked_HSV = cv2.bitwise_and(img_HSV, img_HSV, mask=maskHSV)
+    # set img
+    new_img = masked_HSV.copy().astype(np.float32)
+    left_edge = np.zeros(masked_HSV.shape[0], dtype=np.uint32)
+    right_edge = np.full(masked_HSV.shape[0], img_HSV.shape[1], dtype=np.uint32)
+    for _y in range(masked_HSV.shape[0]):
+        t = np.argwhere(masked_HSV[_y].sum(-1) > 0).flatten()
+        if t.size > 0:
+            k = 4
+            left_edge[_y] = np.min(t) + k
+            right_edge[_y] = np.max(t) - k
+            kind = "slinear"
+            x_fit = np.concatenate(([left_edge[_y] // 2], np.arange(left_edge[_y], left_edge[_y] + k)), 0)
+            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img[_y, left_edge[_y]:left_edge[_y] + k, :]), 0)
+            fl = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
+            x_fit = np.concatenate(
+                ([(new_img.shape[1] + right_edge[_y]) // 2], np.arange(right_edge[_y] - k, right_edge[_y])), 0)
+            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img[_y, right_edge[_y] - k: right_edge[_y], :]), 0)
+            fr = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
+            new_img[_y, left_edge[_y] // 2:left_edge[_y], :] = fl(np.arange(left_edge[_y] // 2, left_edge[_y])).clip(0,
+                                                                                                                     255)
+            new_img[_y, right_edge[_y]:(new_img.shape[1] + right_edge[_y]) // 2, :] = fr(
+                np.arange(right_edge[_y], (new_img.shape[1] + right_edge[_y]) // 2)).clip(0, 255)
+            new_img[_y, :left_edge[_y] // 2, :] = avg_color
+            new_img[_y, (new_img.shape[1] + right_edge[_y]) // 2:, :] = avg_color
+    for _y in range(new_img.shape[0] - 1):
+        for _x in reversed(range(0, left_edge[_y])):
+            new_img[_y, _x] = 0.33 * new_img[_y - 1, _x] + 0.34 * new_img[_y, _x + 1] + 0.33 * new_img[
+                _y + 1, _x]
+        for _x in range(right_edge[_y], new_img.shape[1]):
+            new_img[_y, _x] = 0.33 * new_img[_y - 1, _x] + 0.34 * new_img[_y, _x - 1] + 0.33 * new_img[
+                _y + 1, _x]
+    up_edge = np.zeros(img_HSV.shape[1], dtype=np.uint32)
+    down_edge = np.full(img_HSV.shape[1], img_HSV.shape[0], dtype=np.uint32)
+    for _x in range(img_HSV.shape[1]):
+        t = np.argwhere(new_img[:, _x, :].sum(-1) > 0).flatten()
+        if t.size > 0:
+            k = 4
+            up_edge[_x] = np.min(t) + k
+            down_edge[_x] = np.max(t) - k
+            k = 1
+            kind = "slinear"
+            x_fit = np.concatenate(([up_edge[_x] // 2], np.arange(up_edge[_x], up_edge[_x] + k)), 0)
+            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img[up_edge[_x]:up_edge[_x] + k, _x, :]), 0)
+            fl = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
+            x_fit = np.concatenate(
+                ([(new_img.shape[1] + down_edge[_x]) // 2], np.arange(down_edge[_x] - k, down_edge[_x])), 0)
+            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img[down_edge[_x] - k: down_edge[_x], _x, :]), 0)
+            fr = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
+            new_img[up_edge[_x] // 2:up_edge[_x], _x, :] = fl(np.arange(up_edge[_x] // 2, up_edge[_x])).clip(0, 255)
+            new_img[down_edge[_x]:(new_img.shape[0] + down_edge[_y]) // 2, _x, :] = fr(
+                np.arange(down_edge[_x], (new_img.shape[0] + down_edge[_y]) // 2)).clip(0, 255)
+            new_img[:up_edge[_x] // 2, _x, :] = avg_color
+            new_img[(new_img.shape[0] + down_edge[_x]) // 2:, _x, :] = avg_color
+    for _x in range(new_img.shape[1] - 1):
+        for _y in reversed(range(0, up_edge[_x])):
+            new_img[_y, _x] = 0.33 * new_img[_y, _x - 1] + 0.34 * new_img[_y + 1, _x] + 0.33 * new_img[
+                _y, _x + 1]
+        for _y in range(down_edge[_x], new_img.shape[0]):
+            new_img[_y, _x] = 0.33 * new_img[_y, _x - 1] + 0.34 * new_img[_y - 1, _x] + 0.33 * new_img[
+                _y, _x + 1]
+    out_img = new_img.round().clip(0, 255).astype(np.uint8)
+    out_img_BGR = hsv2bgr(out_img)
+    display(np.concatenate((img_BGR, out_img_BGR), axis=1))
+    return
+
+
+def m7():
+    img_BGR = cv2.imread(r'Data/mask/0_texture_2.png')
+    img_HSV = cv2.cvtColor(img_BGR, cv2.COLOR_BGR2HSV).astype(np.float64)
+    avg_color = img_HSV[np.logical_and(img_HSV.sum(-1) > 10, img_HSV.sum(-1) < 700)].mean(0)
+    maskHSV = cv2.inRange(img_HSV, avg_color - np.array([5, 30, 30], dtype=np.float64),
+                          avg_color + np.array([10, 25, 25], dtype=np.float64))
+    for i in range(maskHSV.shape[0]):
+        t = maskHSV[i].nonzero()[0].flatten()
+        if t.size > 1:
+            maskHSV[i, t[0]:t[-1]] = 255
+    masked_HSV = cv2.bitwise_and(img_HSV, img_HSV, mask=maskHSV)
+    # set img
+    new_img = masked_HSV.copy().astype(np.float32)
+    left_edge = np.zeros(masked_HSV.shape[0], dtype=np.uint32)
+    right_edge = np.full(masked_HSV.shape[0], img_HSV.shape[1], dtype=np.uint32)
+    for _y in range(masked_HSV.shape[0]):
+        t = np.argwhere(masked_HSV[_y].sum(-1) > 0).flatten()
+        if t.size > 0:
+            k = 4
+            left_edge[_y] = np.min(t) + k
+            right_edge[_y] = np.max(t) - k
+            kind = "slinear"
+            x_fit = np.concatenate(([left_edge[_y] // 2], np.arange(left_edge[_y], left_edge[_y] + k)), 0)
+            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img[_y, left_edge[_y]:left_edge[_y] + k, :]), 0)
+            fl = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
+            x_fit = np.concatenate(
+                ([(new_img.shape[1] + right_edge[_y]) // 2], np.arange(right_edge[_y] - k, right_edge[_y])), 0)
+            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img[_y, right_edge[_y] - k: right_edge[_y], :]), 0)
+            fr = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
+            new_img[_y, left_edge[_y] // 2:left_edge[_y], :] = fl(np.arange(left_edge[_y] // 2, left_edge[_y])).clip(0,
+                                                                                                                     255)
+            new_img[_y, right_edge[_y]:(new_img.shape[1] + right_edge[_y]) // 2, :] = fr(
+                np.arange(right_edge[_y], (new_img.shape[1] + right_edge[_y]) // 2)).clip(0, 255)
+            new_img[_y, :left_edge[_y] // 2, :] = avg_color
+            new_img[_y, (new_img.shape[1] + right_edge[_y]) // 2:, :] = avg_color
+    for _y in range(new_img.shape[0] - 1):
+        for _x in reversed(range(0, left_edge[_y])):
+            new_img[_y, _x] = 0.33 * new_img[_y - 1, _x] + 0.34 * new_img[_y, _x + 1] + 0.33 * new_img[
+                _y + 1, _x]
+        for _x in range(right_edge[_y], new_img.shape[1]):
+            new_img[_y, _x] = 0.33 * new_img[_y - 1, _x] + 0.34 * new_img[_y, _x - 1] + 0.33 * new_img[
+                _y + 1, _x]
+    up_edge = np.zeros(img_HSV.shape[1], dtype=np.uint32)
+    down_edge = np.full(img_HSV.shape[1], img_HSV.shape[0], dtype=np.uint32)
+    for _x in range(img_HSV.shape[1]):
+        t = np.argwhere(new_img[:, _x, :].sum(-1) > 0).flatten()
+        if t.size > 0:
+            k = 4
+            up_edge[_x] = np.min(t) + k
+            down_edge[_x] = np.max(t) - k
+            k = 1
+            kind = "slinear"
+            x_fit = np.concatenate(([up_edge[_x] // 2], np.arange(up_edge[_x], up_edge[_x] + k)), 0)
+            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img[up_edge[_x]:up_edge[_x] + k, _x, :]), 0)
+            fl = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
+            x_fit = np.concatenate(
+                ([(new_img.shape[1] + down_edge[_x]) // 2], np.arange(down_edge[_x] - k, down_edge[_x])), 0)
+            y_fit = np.concatenate((avg_color.reshape(1, 3), new_img[down_edge[_x] - k: down_edge[_x], _x, :]), 0)
+            fr = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
+            new_img[up_edge[_x] // 2:up_edge[_x], _x, :] = fl(np.arange(up_edge[_x] // 2, up_edge[_x])).clip(0, 255)
+            new_img[down_edge[_x]:(new_img.shape[0] + down_edge[_y]) // 2, _x, :] = fr(
+                np.arange(down_edge[_x], (new_img.shape[0] + down_edge[_y]) // 2)).clip(0, 255)
+            new_img[:up_edge[_x] // 2, _x, :] = avg_color
+            new_img[(new_img.shape[0] + down_edge[_x]) // 2:, _x, :] = avg_color
+    for _x in range(new_img.shape[1] - 1):
+        for _y in reversed(range(0, up_edge[_x])):
+            new_img[_y, _x] = 0.33 * new_img[_y, _x - 1] + 0.34 * new_img[_y + 1, _x] + 0.33 * new_img[
+                _y, _x + 1]
+        for _y in range(down_edge[_x], new_img.shape[0]):
+            new_img[_y, _x] = 0.33 * new_img[_y, _x - 1] + 0.34 * new_img[_y - 1, _x] + 0.33 * new_img[
+                _y, _x + 1]
+    out_img = new_img.round().clip(0, 255).astype(np.uint8)
+    out_img_BGR = hsv2bgr(out_img)
+    display(np.concatenate((img_BGR, hsv2bgr(masked_HSV), out_img_BGR), axis=1))
+    return
 
 
 if __name__ == "__main__":
@@ -690,4 +1168,6 @@ if __name__ == "__main__":
     # new_img = color_gradient_v4(img, edge_along_y)
     # display(new_img, "v4")
 
-    main_v3()
+    # main_v3()
+    # main_v4()
+    m7()
