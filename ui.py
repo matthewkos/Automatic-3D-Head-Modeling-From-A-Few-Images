@@ -61,7 +61,7 @@ if __name__ == '__main__':
         print("pip install -r requirement.txt")
     print("\ttime={:.2f}s".format(time() - start_time))
 
-    create tensorflow sess
+    # create tensorflow sess
     sess = tf.Session(config=tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True)))
     ##################################################
 
@@ -207,51 +207,45 @@ if __name__ == '__main__':
 
             # Update the BLENDER_BACKGROUND setting in config.ini
             configManager.addOne('BLENDER_BACKGROUND', values["_blender_background_"])
+            BLENDER_BACKGROUND = values["_blender_background_"]
 
             if values["_full_model_radio_"]:
-                # Generate complete model
-                global_start = time()
-                """Geometry"""
-                time_it_wrapper(None, "Generating Geometry")
-                """Mask"""
-                time_it_wrapper(genPRMask, "Generating Mask", (relative_current_img_path, DIR_MASK),
-                                kwargs={'isMask': False})
-                """Texture"""
-                time_it_wrapper(genText, "Generating Texture", (
-                    os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])),
-                    os.path.join(DIR_TEXTURE, TEXTURE_DATA)))
-                """Alignment"""
-                time_it_wrapper(blender_wrapper, "Alignment",
-                                args=(
-                                    ".\\geometry.blend", ".\\blender_script\\geo.py", INPUT_DATA, TEXTURE_DATA,
-                                    HAIR_DATA,
-                                    MASK_DATA, OUT_DATA, True, False))
-                print("Output to: {}".format(os.path.join(os.getcwd(), DIR_OUT, OUT_DATA)))
-                print("Total_time: {:.2f}".format(time() - global_start))
-                pass
+                HAIR = True
             elif values["_head_only_radio_"]:
-                # Generate head model only
-                global_start = time()
-                """Geometry"""
-                time_it_wrapper(None, "Generating Geometry")
-                """Mask"""
-                time_it_wrapper(genPRMask, "Generating Mask", (relative_current_img_path, DIR_MASK))
-                """Texture"""
-                time_it_wrapper(genText, "Generating Texture", (
-                    os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])),
-                    os.path.join(DIR_TEXTURE, TEXTURE_DATA)))
-                """Alignment"""
-                time_it_wrapper(blender_wrapper, "Alignment",
-                                args=(
-                                    ".\\geometry.blend", ".\\blender_script\\geo.py", INPUT_DATA, TEXTURE_DATA,
-                                    HAIR_DATA,
-                                    MASK_DATA, OUT_DATA, False, False))
-                print("Output to: {}".format(os.path.join(os.getcwd(), DIR_OUT, OUT_DATA)))
-                print("Total_time: {:.2f}".format(time() - global_start))
-                pass
+                HAIR = False
             elif values["_hair_only_radio_"]:
                 # Generate hair model only
                 pass
+            configManager.addOne('HAIR', HAIR)
+
+            global_start = time()
+            """Geometry"""
+            time_it_wrapper(None, "Generating Geometry")
+            """Mask"""
+            time_it_wrapper(genPRMask, "Generating Mask", args=(
+                os.path.join(DIR_INPUT, INPUT_DATA),
+                DIR_MASK),
+                            kwargs={'isMask': False})
+            """Texture"""
+            time_it_wrapper(genText, "Generating Texture", args=(
+                os.path.join(DIR_MASK, "{}_texture_2.png".format(MASK_DATA[:-4])),
+                os.path.join(DIR_TEXTURE, TEXTURE_DATA),
+                os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])),
+                (512, 512, 3)
+            ))
+            """Alignment"""
+            time_it_wrapper(blender_wrapper, "Alignment", args=(
+                ".\\new_geometry.blend",
+                ".\\blender_script\\geo.py",
+                INPUT_DATA,
+                TEXTURE_DATA,
+                HAIR_DATA,
+                MASK_DATA,
+                OUT_DATA,
+                HAIR,
+                BLENDER_BACKGROUND))
+            print("Output to: {}".format(os.path.join(os.getcwd(), DIR_OUT, OUT_DATA)))
+            print("Total_time: {:.2f}".format(time() - global_start))
 
             # After Generation:
             current_obj_path = ".\\" + DIR_OUT + "\\" + configManager.getOne("OUT_DATA")

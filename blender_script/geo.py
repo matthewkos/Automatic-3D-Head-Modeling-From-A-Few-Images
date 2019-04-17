@@ -419,14 +419,13 @@ class HeadMask_Align:
         left_ind = np.loadtxt(os.path.join(DIR_KPTS, 'left.txt')).astype(np.int32)
         fore_ind = np.loadtxt(os.path.join(DIR_KPTS, 'fore.txt')).astype(np.int32)
         jaw_ind = np.loadtxt(os.path.join(DIR_KPTS, 'jaw.txt')).astype(np.int32)
-        neck_ind = np.loadtxt(os.path.join(DIR_KPTS, 'neck.txt')).astype(np.int32)
         ear_ind = np.loadtxt(os.path.join(DIR_KPTS, 'ear.txt')).astype(np.int32)
 
         left_ind += self.FACE_COUNT
         fore_ind += self.FACE_COUNT
         jaw_ind += self.FACE_COUNT
         
-        return kpt_ind, left_ind, fore_ind, jaw_ind, ind_bound, neck_ind, ear_ind
+        return kpt_ind, left_ind, fore_ind, jaw_ind, ind_bound, ear_ind
 
     def get_scale(self, face, head):
         P1_REF = 4545 + self.FACE_COUNT  # 45450#52447
@@ -526,7 +525,7 @@ class HeadMask_Align:
         """
         GET data from files
         """
-        kpt_ind, left_ind, fore_ind, jaw_ind, ind_bound, neck_ind, ear_ind = self.get_kpts()
+        kpt_ind, left_ind, fore_ind, jaw_ind, ind_bound, ear_ind = self.get_kpts()
         object_mode('Head')
         import_obj(os.path.join(DIR_MASK, MASK_DATA), 'Object')
         bpy.context.scene.objects.active = None
@@ -556,7 +555,6 @@ class HeadMask_Align:
         self.edge_fit(face, head, mesh, fore_ind, jaw_ind, ind_bound, kpt_ind)
 
         bpy.ops.mesh.select_all(action='DESELECT')
-        # self.sel_vert(neck_ind, mesh)
         self.sel_vert(ear_ind, mesh)
         bpy.ops.mesh.delete(type='VERT')
         # sel_vert(ear_ind, mesh)

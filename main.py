@@ -358,7 +358,7 @@ def blender_wrapper(blender_file, script_file_path, input_data, texture, hair, m
             cmd = "{} -b {} -P {}".format(blender, blender_file, script_file_path)
         else:
             cmd = "{} {} -P {}".format(blender, blender_file, script_file_path)
-        print(cmd)
+        print("Running cmd: ", cmd)
         try:
             return_code = subprocess.call(cmd.split(' '), shell=True)
             if return_code:
@@ -457,7 +457,7 @@ def main(img_path = None):
     time_it_wrapper(None, "Generating Geometry")
     """Mask"""
     time_it_wrapper(genPRMask, "Generating Mask", args=(
-        os.path.join(DIR_INPUT, img_path),
+        os.path.join(DIR_INPUT, INPUT_DATA),
         DIR_MASK),
                     kwargs={'isMask': False})
     """Texture"""
@@ -477,7 +477,7 @@ def main(img_path = None):
         MASK_DATA,
         OUT_DATA,
         HAIR,
-        BLENDER_BACKGROUND))
+        False))
     print("Output to: {}".format(os.path.join(os.getcwd(), DIR_OUT, OUT_DATA)))
     print("Total_time: {:.2f}".format(time() - global_start))
     return
