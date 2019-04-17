@@ -24,7 +24,7 @@ def view_selected_index():
     """
     obj = bpy.context.object
     bm = bmesh.from_edit_mesh(obj.data)
-    verts = [v for v in bm.verts if v.select]
+    verts = [v.index for v in bm.verts if v.select]
     return verts
 
 
@@ -179,8 +179,8 @@ def apply_head_sub():
 
 def get_upper_head_abs(matrix_world):
     # matrix_world = head.matrix_world
-    Y_REF = 573
-    Z_REF = 573
+    Y_REF = 987
+    Z_REF = 987
     head = select('Head')
     bm = bmesh.new()
     bm.from_object(head, get_scene())
@@ -695,8 +695,6 @@ if __name__ == '__main__':
     print("WS: ", os.getcwd())
     with open('.\config.ini', 'r') as json_file:
         json_data = json.load(json_file)
-        # for (k, v) in json_data.items():
-        #     exec("{} = {}".format(k, v))
         OBJ_HEAD_MODEL_HAIR = json_data["OBJ_HEAD_MODEL_HAIR"]
         DIR_INPUT = json_data["DIR_INPUT"]
         DIR_TEXTURE = json_data["DIR_TEXTURE"]
@@ -743,6 +741,8 @@ if __name__ == '__main__':
         item.select = False
     bpy.data.objects['Head'].select = True
     bpy.data.objects['Face'].select = True
+    # if HAIR:
+        # bpy.data.objects['Hair'].select = True
     bpy.ops.object.join()
 
     # change viewpoint

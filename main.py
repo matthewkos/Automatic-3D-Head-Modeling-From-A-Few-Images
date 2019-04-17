@@ -67,7 +67,7 @@ def getTFsess():
 #     img[y0:y1, x, 2] = np.fromfunction(
 #         lambda _x: left_color[2] * (1 - _x / length) + right_color[2] * (_x / length), (length,))
 #     return img
-
+#
 #
 # def image_expansion_v2(img, internal=False):
 #     img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV).astype(np.float64)
@@ -415,39 +415,35 @@ def time_it_wrapper(callback, name="", args=(), kwargs={}):
     return temp
 
 
-def main():
+def main(img_path = None):
     """
     Main
     :return:
     """
     """Ask for input"""
-    # img_path = input("Path of image: ")
-    img_path = "0.jpg"
-    os.chdir(r"C:\Users\KTL\Desktop\FYP-code\\")
     global_start = time()
     """Import constants from config file"""
     configManager = ConfigManager('.\\config.ini')
     json_data = configManager.getAll()
-    OBJ_HEAD_MODEL_HAIR = json_data["OBJ_HEAD_MODEL_HAIR"]
     DIR_INPUT = json_data["DIR_INPUT"]
     DIR_TEXTURE = json_data["DIR_TEXTURE"]
-    DIR_HAIR = json_data["DIR_HAIR"]
     DIR_MASK = json_data["DIR_MASK"]
     DIR_OUT = json_data["DIR_OUT"]
-    DIR_KPTS = json_data["DIR_KPTS"]
     INPUT_DATA = json_data["INPUT_DATA"]
     TEXTURE_DATA = json_data["TEXTURE_DATA"]
     HAIR_DATA = json_data["HAIR_DATA"]
     MASK_DATA = json_data["MASK_DATA"]
     OUT_DATA = json_data["OUT_DATA"]
     HAIR = json_data["HAIR"]
+    BLENDER_BACKGROUND = json_data["BLENDER_BACKGROUND"]
 
-    INPUT_DATA = json_data['INPUT_DATA'] = img_path
-    TEXTURE_DATA = json_data["TEXTURE_DATA"] = img_path
-    MASK_DATA = json_data["MASK_DATA"] = "{}.obj".format(img_path[:-4])
-    OUT_DATA = json_data["OUT_DATA"] = "{}.obj".format(img_path[:-4])
-    configManager.addPairs(json_data)
-    assert os.path.exists(os.path.join(DIR_INPUT, img_path))
+    if img_path is not None:
+        INPUT_DATA = json_data['INPUT_DATA'] = img_path
+        TEXTURE_DATA = json_data["TEXTURE_DATA"] = img_path
+        MASK_DATA = json_data["MASK_DATA"] = "{}.obj".format(img_path[:-4])
+        OUT_DATA = json_data["OUT_DATA"] = "{}.obj".format(img_path[:-4])
+        configManager.addPairs(json_data)
+        assert os.path.exists(os.path.join(DIR_INPUT, img_path))
 
     """Setup"""
     warnings.filterwarnings("ignore")
@@ -465,7 +461,7 @@ def main():
         DIR_MASK),
                     kwargs={'isMask': False})
     """Texture"""
-    time_it_wrapper(genText, "Generating External Texture", args=(
+    time_it_wrapper(genText, "Generating Texture", args=(
         os.path.join(DIR_MASK, "{}_texture_2.png".format(MASK_DATA[:-4])),
         os.path.join(DIR_TEXTURE, TEXTURE_DATA),
         os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])),
@@ -481,11 +477,11 @@ def main():
         MASK_DATA,
         OUT_DATA,
         HAIR,
-        False))
+        BLENDER_BACKGROUND))
     print("Output to: {}".format(os.path.join(os.getcwd(), DIR_OUT, OUT_DATA)))
     print("Total_time: {:.2f}".format(time() - global_start))
     return
 
 
 if __name__ == '__main__':
-    main()
+    main('0.jpg')
