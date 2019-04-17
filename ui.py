@@ -76,7 +76,7 @@ if __name__ == '__main__':
     # Menu Frame Layout
     # Menu Definition
     menu_bar_def = [['&File', ['&Open', '&Save', '---', 'Properties', 'E&xit'  ]],      
-                ['&Edit', ['Paste', ['Special', 'Normal',], 'Undo'],],      
+                ['&Edit', ['Redo', 'Undo'],],      
                 ['&Help', '&About...'],]    
 
     # Input Frame Layout
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     ]
 
     hairstyle_preview_frame_layout = [
-        [sg.Image(filename=DEFAULT_INPUT_DISPLAY ,size=(UI_DISPLAY_WIDTH,UI_DISPLAY_HEIGHT), key='_HAIR_PREVIEW_1_', visible=True),],
+        [sg.Image(filename="Data\\ui_images\\strands00001.png" ,size=(UI_DISPLAY_WIDTH,UI_DISPLAY_HEIGHT), key='_HAIR_PREVIEW_1_', visible=True),],
         [sg.Slider((1,50),  key='_HAIRSTYLE_PREVIEW_SLIDER_', orientation='h', enable_events=True, disable_number_display=False, size=(5,10), font=("Helvetica", 10))]
     ]
 
@@ -191,7 +191,7 @@ if __name__ == '__main__':
         elif event == '_HAIRSTYLE_PREVIEW_SLIDER_':
             # Slide to change hairstyle preview images
             slider_value = values['_HAIRSTYLE_PREVIEW_SLIDER_']
-            window_main.FindElement('_HAIR_PREVIEW_1_').Update('Data\\ui_images\\hair_2.png')
+            window_main.FindElement('_HAIR_PREVIEW_1_').Update('Data\\ui_images\\strands00002.png',size=(UI_DISPLAY_WIDTH,UI_DISPLAY_HEIGHT))
         elif event == 'Generate':
             if current_img_path == "":
                 # use default image if user does not input a path before
