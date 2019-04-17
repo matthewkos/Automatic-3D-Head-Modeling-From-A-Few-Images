@@ -50,19 +50,19 @@ if __name__ == '__main__':
 
     #################### Setup #######################
     
-    # warnings.filterwarnings("ignore")
-    # print("Importing packages: ")
-    # start_time = time()
-    # try:
-    #     from PRNet.myPRNET import genPRMask
-    # except Exception as err:
-    #     print(err)
-    #     print("Cannot import PRNet. Please install all required packages in requirement.txt.")
-    #     print("pip install -r requirement.txt")
-    # print("\ttime={:.2f}s".format(time() - start_time))
+    warnings.filterwarnings("ignore")
+    print("Importing packages: ")
+    start_time = time()
+    try:
+        from PRNet.myPRNET import genPRMask
+    except Exception as err:
+        print(err)
+        print("Cannot import PRNet. Please install all required packages in requirement.txt.")
+        print("pip install -r requirement.txt")
+    print("\ttime={:.2f}s".format(time() - start_time))
 
-    # create tensorflow sess
-    # sess = tf.Session(config=tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True)))
+    create tensorflow sess
+    sess = tf.Session(config=tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True)))
     ##################################################
 
     sg.ChangeLookAndFeel('Black')
@@ -105,6 +105,7 @@ if __name__ == '__main__':
         [sg.Radio('Hair Only', group_id="Generation_Setting", key="_hair_only_radio_", size=(10, 1)), ],
         [sg.Text('Hair Model (.obj) File Path:', size=(20, 1)), sg.InputText(DEFAULT_HAIR_OUTPUT, size=(50, 1), key='_HAIR_OBJ_PATH_'), sg.FileBrowse()],
         [sg.Text('Head Model (.obj) File Path:', size=(20, 1)), sg.InputText(DEFAULT_HEAD_OUTPUT, size=(50, 1), key='_HEAD_OBJ_PATH_'), sg.FileBrowse()],
+        [sg.Checkbox('Blender Background', key = "_blender_background_", default=True)],
         [sg.Button('Generate')]
     ]  
 
@@ -204,7 +205,8 @@ if __name__ == '__main__':
             assert os.path.exists(relative_current_img_path), "Invalid path: "+relative_current_img_path
             print("Relative image path:", relative_current_img_path)
 
-            # Update config.ini
+            # Update the BLENDER_BACKGROUND setting in config.ini
+            configManager.addOne('BLENDER_BACKGROUND', values["_blender_background_"])
 
             if values["_full_model_radio_"]:
                 # Generate complete model
