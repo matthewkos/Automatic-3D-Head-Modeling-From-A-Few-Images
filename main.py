@@ -477,7 +477,7 @@ def main(img_path = None):
         MASK_DATA,
         OUT_DATA,
         HAIR,
-        False))
+        BLENDER_BACKGROUND))
     print("Output to: {}".format(os.path.join(os.getcwd(), DIR_OUT, OUT_DATA)))
     print("Total_time: {:.2f}".format(time() - global_start))
     return

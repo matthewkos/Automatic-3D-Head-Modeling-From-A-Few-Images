@@ -105,7 +105,7 @@ if __name__ == '__main__':
         [sg.Radio('Hair Only', group_id="Generation_Setting", key="_hair_only_radio_", size=(10, 1)), ],
         [sg.Text('Hair Model (.obj) File Path:', size=(20, 1)), sg.InputText(DEFAULT_HAIR_OUTPUT, size=(50, 1), key='_HAIR_OBJ_PATH_'), sg.FileBrowse()],
         [sg.Text('Head Model (.obj) File Path:', size=(20, 1)), sg.InputText(DEFAULT_HEAD_OUTPUT, size=(50, 1), key='_HEAD_OBJ_PATH_'), sg.FileBrowse()],
-        [sg.Checkbox('Blender Background', key = "_blender_background_", default=True)],
+        [sg.Checkbox('Blender Background', key = "_blender_background_", default=False)],
         [sg.Button('Generate')]
     ]  
 
