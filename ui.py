@@ -95,8 +95,10 @@ if __name__ == '__main__':
     hairstyle_preview_frame_layout = [
         [sg.Image(filename="Data\\ui_images\\strands00001.png", size=(UI_DISPLAY_WIDTH, UI_DISPLAY_HEIGHT),
                   key='_HAIR_PREVIEW_1_', visible=True), ],
-        [sg.Slider((1, 514), key='_HAIRSTYLE_PREVIEW_SLIDER_', orientation='h', enable_events=True,
-                   disable_number_display=False, size=(40, 15), font=("Helvetica", 10))]
+        [sg.Slider(range=(1, 514), key='_HAIRSTYLE_PREVIEW_SLIDER_', orientation='h', enable_events=True,
+                   disable_number_display=False, size=(20, 15), font=("Helvetica", 10))],
+        [sg.Text('No.:', size=(5, 1)), sg.InputText('1', key='_HAIR_NO_INPUT_', size=(15, 1))],
+        [sg.Button('Select', key='_SELECT_HAIR_NO_')]
     ]
 
     # Image Frame Layout
@@ -139,7 +141,7 @@ if __name__ == '__main__':
 
     ]
     # default window size = (698, 426)
-    window_main = sg.Window('Automatic Head Modelling', size=(850, 500), icon='Data\\ui_images\\icon.ico',
+    window_main = sg.Window('Automatic Head Modelling', size=(850, 550), icon='Data\\ui_images\\icon.ico',
                             auto_size_text=True, auto_size_buttons=True, resizable=True, grab_anywhere=False, ).Layout(
         layout)
 
@@ -222,6 +224,20 @@ if __name__ == '__main__':
                 window_main.FindElement('_HAIR_PREVIEW_1_').Update(
                     os.path.join("Data", "ui_images", hair_file_name[:-5] + ".png"),
                     size=(UI_DISPLAY_WIDTH, UI_DISPLAY_HEIGHT))
+
+        elif event == '_SELECT_HAIR_NO_':
+            """
+            Select Hairstyle by inputing the number
+            """
+            slider_value = values['_HAIR_NO_INPUT_']
+            hair_file_name = "strands{}.data".format(str(int(slider_value)).zfill(5))
+            if os.path.exists(os.path.join(DIR_HAIR, hair_file_name)):
+                configManager.addOne('HAIR_DATA', hair_file_name)
+                window_main.FindElement('_HAIR_PREVIEW_1_').Update(
+                    os.path.join("Data", "ui_images", hair_file_name[:-5] + ".png"),
+                    size=(UI_DISPLAY_WIDTH, UI_DISPLAY_HEIGHT))
+                # Update Slider's value
+                window_main.FindElement('_HAIRSTYLE_PREVIEW_SLIDER_').Update(value=slider_value)
 
 
         elif event == 'Generate':
