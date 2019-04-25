@@ -642,10 +642,10 @@ def color_hair():
     select('Hair')
     bpy.context.scene.objects.active = bpy.data.objects['Hair']
     # Get material
-    mat = bpy.data.materials.get("Material")
+    mat = bpy.data.materials.get("Material-hair")
     if mat is None:
         # create material
-        mat = bpy.data.materials.new(name="Material")
+        mat = bpy.data.materials.new(name="Material-hair")
 
     # Assign it to object
     if bpy.data.objects['Hair'].data.materials:

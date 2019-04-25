@@ -241,17 +241,28 @@ def getTFsess():
 #     new_img = new_img.round().clip(0, 255).astype(np.uint8)
 #     return new_img
 
+def process_copy(img_full,img_half):
+    for _y in range(img_full.shape[0]):
+        t = np.argwhere(img_half[_y].sum(-1) > 0).flatten()
+        if t.size > 0:
+            k = 4
+            left_edge = np.min(t)
+            right_edge = np.max(t)
+            img_half[_y, left_edge:right_edge] = img_full[_y, left_edge:right_edge]
+    return img_half
 
-def genText(img_path, output_head_path, output_mask_path, size=None):
+def genText(img_path_full, img_path_half, output_head_path, output_mask_path, size=None):
     assert size is None or (type(size) == tuple and len(size) == 3)
 
-    img = cv2.imread(img_path)
+    img_full = cv2.imread(img_path_full)
+    img_half = cv2.imread(img_path_half)
+    img = process_copy(img_full, img_half)
     if size is None:
         size = img.shape
     new_img = np.zeros(size, dtype=np.uint8)
     internal = (
         (size[0] * 3 // 5 - img.shape[0] // 2), (size[0] * 3 // 5 + img.shape[0] // 2), (size[1] - img.shape[1]) // 2,
-        (size[1] + img.shape[1]) // 2)
+        (size[1] + img_full.shape[1]) // 2)
     new_img[internal[0]:internal[1], internal[2]:internal[3], :] = img
     img = image_expansion_execute(new_img)
     cv2.imwrite(output_head_path, img)
@@ -262,9 +273,9 @@ def genText(img_path, output_head_path, output_mask_path, size=None):
 
 def image_expansion_execute(img_BGR):
     img_HSV = cv2.cvtColor(img_BGR, cv2.COLOR_BGR2HSV).astype(np.float64)
-    avg_color = img_HSV[np.logical_and(img_HSV.sum(-1) > 10, img_HSV.sum(-1) < 700)].mean(0)
-    maskHSV = cv2.inRange(img_HSV, avg_color - np.array([5, 30, 30], dtype=np.float64),
-                          avg_color + np.array([10, 25, 25], dtype=np.float64))
+    avg_color = img_HSV[np.logical_and(img_HSV.sum(-1) > 30, img_HSV.sum(-1) < 700)].mean(0)
+    maskHSV = cv2.inRange(img_HSV, avg_color - np.array([20, 35, 35], dtype=np.float64),
+                          avg_color + np.array([20, 35, 35], dtype=np.float64))
     for i in range(maskHSV.shape[0]):
         t = maskHSV[i].nonzero()[0].flatten()
         if t.size > 1:
@@ -462,9 +473,10 @@ def main(img_path = None):
                     kwargs={'isMask': False})
     """Texture"""
     time_it_wrapper(genText, "Generating Texture", args=(
-        os.path.join(DIR_MASK, "{}_texture_2.png".format(MASK_DATA[:-4])),
-        os.path.join(DIR_TEXTURE, TEXTURE_DATA),
-        os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])),
+        os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])), # input full
+        os.path.join(DIR_MASK, "{}_texture_2.png".format(MASK_DATA[:-4])), # input half
+        os.path.join(DIR_TEXTURE, TEXTURE_DATA), # output texture for head
+        os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])), # output texture for mask
         (512, 512, 3)
     ))
     """Alignment"""
@@ -473,15 +485,15 @@ def main(img_path = None):
         ".\\blender_script\\geo.py",
         INPUT_DATA,
         TEXTURE_DATA,
-        HAIR_DATA,
+        "strands00357.data",
         MASK_DATA,
         OUT_DATA,
-        HAIR,
-        BLENDER_BACKGROUND))
+        True,
+        False))
     print("Output to: {}".format(os.path.join(os.getcwd(), DIR_OUT, OUT_DATA)))
     print("Total_time: {:.2f}".format(time() - global_start))
     return
 
 
 if __name__ == '__main__':
-    main('0.jpg')
+    main('mschan.jpg')
