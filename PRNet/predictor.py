@@ -85,6 +85,13 @@ class resfcn256(object):
 
 class PosPrediction():
     def __init__(self, resolution_inp=256, resolution_op=256, sess=None):
+        #
+        # if sess is None:
+        #     self.sess = getTFsess()
+        # else:
+        #     self.sess = sess
+        self.sess = tf.Session(config=tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True)))
+
         # -- hyper settings
         self.resolution_inp = resolution_inp
         self.resolution_op = resolution_op
@@ -95,11 +102,11 @@ class PosPrediction():
 
         # net forward
         self.x = tf.placeholder(tf.float32, shape=[None, self.resolution_inp, self.resolution_inp, 3])
+
         self.x_op = self.network(self.x, is_training=False)
-        if sess is None:
-            self.sess = getTFsess()
-        else:
-            self.sess = sess
+
+    def __del__(self):
+        self.sess.close()
 
     def restore(self, model_path):
         tf.train.Saver(self.network.vars).restore(self.sess, model_path)

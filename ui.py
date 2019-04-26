@@ -57,18 +57,8 @@ if __name__ == '__main__':
     #################### Setup #######################
 
     warnings.filterwarnings("ignore")
-    print("Importing packages: ")
-    start_time = time()
-    try:
-        from PRNet.myPRNET import genPRMask
-    except Exception as err:
-        print(err)
-        print("Cannot import PRNet. Please install all required packages in requirement.txt.")
-        print("pip install -r requirement.txt")
-    print("\ttime={:.2f}s".format(time() - start_time))
 
-    # create tensorflow sess
-    sess = tf.Session(config=tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True)))
+
     ##################################################
 
     sg.ChangeLookAndFeel('Black')
@@ -78,8 +68,6 @@ if __name__ == '__main__':
         DEFAULT_INPUT_DISPLAY = os.path.abspath(r".\.temp\default_white.png")
     # TODO: Confirm the default INPUT and OUTPUT
     DEFAULT_OUTPUT = os.path.abspath(os.path.join(DIR_OUT, OUT_DATA))
-    print(OUT_DATA)
-    print(DEFAULT_OUTPUT)
     DEFAULT_HEAD_OUTPUT = None
     DEFAULT_HAIR_OUTPUT = None
 
@@ -121,7 +109,7 @@ if __name__ == '__main__':
         #  sg.InputText(DEFAULT_HAIR_OUTPUT, size=(50, 1), key='_HAIR_OBJ_PATH_'), sg.FileBrowse()],
         [sg.Text('Output File Path (.obj):', size=(20, 1)),
          sg.InputText(DEFAULT_OUTPUT, size=(50, 1), key='_HEAD_OBJ_PATH_'), sg.FileBrowse()],
-        [sg.Checkbox('Blender Background', key="_blender_background_", default=False)],
+        [sg.Checkbox('Run Blender in  background', key="_blender_background_", default=False)],
         [sg.Button('Generate')]
     ]
 
@@ -132,6 +120,10 @@ if __name__ == '__main__':
         [sg.Button('Show 3D model')]
     ]
 
+    hair_color_frame_layout = [
+        [sg.Text('Hair Color:'), sg.InputText("#000000", key="_hair_color_value_")],
+        [sg.ColorChooserButton("Choose", target="_hair_color_value_", key="_hair_color_chooser_")]
+    ]
     # Main Layout 
     layout = [
         [sg.Menu(menu_bar_def)],
@@ -142,6 +134,8 @@ if __name__ == '__main__':
                   key="_GENERATION_CONTROL_FRAME_", visible=True),
          sg.Frame('Hairstyle Preview', hairstyle_preview_frame_layout, title_color='white'), ],
         [sg.Frame('3D Model Preview', model_preview_frame_layout, title_color='white', key="_MODEL_PREVIEW_FRAME_",
+                  visible=True),
+         sg.Frame('Hair Color', hair_color_frame_layout, title_color='white', key="_HAIR_COLOR_FRAME_",
                   visible=True)],
 
     ]
@@ -154,6 +148,19 @@ if __name__ == '__main__':
 
     current_img_path = ''
     current_obj_path = ''
+
+    ########## load PRNET ##########
+    print("Importing packages: ")
+    start_time = time()
+    try:
+        from PRNet.myPRNET import genPRMask
+    except Exception as err:
+        print(err)
+        print("Cannot import PRNet. Please install all required packages in requirement.txt.")
+        print("pip install -r requirement.txt")
+    print("\ttime={:.2f}s".format(time() - start_time))
+    ###############################
+
     while True:  # Event Loop
         event, values = window_main.Read()
         print(event, values)
@@ -170,19 +177,8 @@ if __name__ == '__main__':
                     raise ValueError('Invalid Path')
 
                 input_data = os.path.split(current_img_path)[-1]
-                # if os.path.isfile(os.path.join(DIR_INPUT,input_data)):
-                #     if not os.path.samefile(".\\" + DIR_INPUT + ".\\" + input_data, current_img_path):
-                #         # Rename the new input file if the designated path has a file with same filename
-                #         dot_index = input_data.find('.')
-                #         input_data = input_data[0:dot_index] + '_{0:%Y%m%d_%H%M%S}'.format(datetime.now()) + input_data[
-                #                                                                                              dot_index:]
-                #         # Copy the image file to the designated path of config.ini
-                #         new_img_path = ".\\" + DIR_INPUT + ".\\" + input_data
-                #         shutil.copy(current_img_path, new_img_path)
-                #         current_img_path = os.path.abspath(new_img_path)
-                #     else:
-                #         current_img_path = os.path.abspath(".\\" + DIR_INPUT + ".\\" + input_data)
                 current_img_path = os.path.abspath(os.path.join(DIR_INPUT, input_data))
+                # convert to png file
                 if '.png' not in current_img_path:
                     # Try to find a .png file with the same name in the image directory
                     display_img_path = os.path.join(".temp", input_data.replace('.jpg', '.png'))
@@ -195,18 +191,17 @@ if __name__ == '__main__':
                 else:
                     # Use the input .png file
                     display_img_path = current_img_path
-                    pass
-                print('display_img_path = ', display_img_path)
-
-                print('current_img_path = ', current_img_path)
 
                 window_main.FindElement('_IMG_PATH_').Update(current_img_path)
-                # Show another window for the 2D frontal image
                 window_main.FindElement('_IMG_PATH_DISPLAY_').Update(current_img_path)
+                window_main.FindElement('_HEAD_OBJ_PATH_').Update(values['_HEAD_OBJ_PATH_'])
+                window_main.FindElement('_OBJ_PATH_').Update(values['_OBJ_PATH_'])
+                window_main.FindElement('_HAIR_NO_INPUT_').Update(str(int(values['_HAIRSTYLE_PREVIEW_SLIDER_'])))
                 window_main.FindElement('_IMAGE_PREVIEW_').Update(filename=display_img_path,
                                                                   size=(UI_DISPLAY_WIDTH, UI_DISPLAY_HEIGHT),
                                                                   visible=True)
-                # window_main.FindElement('_IMG_PREVIEW_FRAME_').Update(visible=True)
+                window_main.FindElement('_hair_color_value_').Update(values['_hair_color_value_'])
+
             except Exception as err:
                 # Display the error by popup window
                 errmsg = str(err)
@@ -222,11 +217,14 @@ if __name__ == '__main__':
             slider_value = values['_HAIRSTYLE_PREVIEW_SLIDER_']
             hair_file_name = "strands{}.data".format(str(int(slider_value)).zfill(5))
             if os.path.exists(os.path.join(DIR_HAIR, hair_file_name)):
-                configManager.addOne('HAIR_DATA', hair_file_name)
                 window_main.FindElement('_HAIR_PREVIEW_1_').Update(
                     os.path.join("Data", "ui_images", hair_file_name[:-5] + ".png"),
                     size=(UI_DISPLAY_WIDTH, UI_DISPLAY_HEIGHT))
-
+                window_main.FindElement('_IMG_PATH_').Update(values['_IMG_PATH_'])
+                window_main.FindElement('_HEAD_OBJ_PATH_').Update(values['_HEAD_OBJ_PATH_'])
+                window_main.FindElement('_OBJ_PATH_').Update(values['_OBJ_PATH_'])
+                window_main.FindElement('_HAIR_NO_INPUT_').Update(str(int(values['_HAIRSTYLE_PREVIEW_SLIDER_'])))
+                window_main.FindElement('_hair_color_value_').Update(values['_hair_color_value_'])
 
         elif event == '_SELECT_HAIR_NO_':
             """
@@ -235,23 +233,24 @@ if __name__ == '__main__':
             slider_value = values['_HAIR_NO_INPUT_']
             hair_file_name = "strands{}.data".format(str(int(slider_value)).zfill(5))
             if os.path.exists(os.path.join(DIR_HAIR, hair_file_name)):
-                configManager.addOne('HAIR_DATA', hair_file_name)
                 window_main.FindElement('_HAIR_PREVIEW_1_').Update(
                     os.path.join("Data", "ui_images", hair_file_name[:-5] + ".png"),
                     size=(UI_DISPLAY_WIDTH, UI_DISPLAY_HEIGHT))
                 # Update Slider's value
-                window_main.FindElement('_HAIRSTYLE_PREVIEW_SLIDER_').Update(value=slider_value)
-
+                window_main.FindElement('_IMG_PATH_').Update(values['_IMG_PATH_'])
+                window_main.FindElement('_HEAD_OBJ_PATH_').Update(values['_HEAD_OBJ_PATH_'])
+                window_main.FindElement('_OBJ_PATH_').Update(values['_OBJ_PATH_'])
+                window_main.FindElement('_HAIR_NO_INPUT_').Update(str(int(slider_value)))
+                window_main.FindElement('_hair_color_value_').Update(values['_hair_color_value_'])
 
         elif event == 'Generate':
             """
             Generate
             """
-
+            tf.reset_default_graph()
             # Update the input image path in config.ini
 
             current_img_path = values['_IMG_PATH_'] if values['_IMG_PATH_'] != '' else current_img_path
-            print('current_img_path = ', current_img_path)
             if not os.path.isfile(current_img_path):
                 raise ValueError('Invalid Path')
             slider_value = values['_HAIRSTYLE_PREVIEW_SLIDER_']
@@ -261,7 +260,6 @@ if __name__ == '__main__':
                 window_main.FindElement('_HAIR_PREVIEW_1_').Update(
                     os.path.join("Data", "ui_images", HAIR_DATA[:-5] + ".png"),
                     size=(UI_DISPLAY_WIDTH, UI_DISPLAY_HEIGHT))
-            print(HAIR_DATA)
             INPUT_DATA = input_data = os.path.split(current_img_path)[-1]
             TEXTURE_DATA = input_data[:-4] + '.jpg'
             MASK_DATA = input_data[:-4] + '.obj'
@@ -279,7 +277,6 @@ if __name__ == '__main__':
             # Change to relative path
             relative_current_img_path = os.path.relpath(current_img_path, os.getcwd())
             assert os.path.exists(relative_current_img_path), "Invalid path: " + relative_current_img_path
-            print("Relative image path:", relative_current_img_path)
 
             # Update the BLENDER_BACKGROUND setting in config.ini
             configManager.addOne('BLENDER_BACKGROUND', values["_blender_background_"])
@@ -289,11 +286,12 @@ if __name__ == '__main__':
                 HAIR = True
             elif values["_head_only_radio_"]:
                 HAIR = False
-            elif values["_hair_only_radio_"]:
-                # Generate hair model only
-                HAIR = False
-                pass
             configManager.addOne('HAIR', HAIR)
+            HAIR_DATA = "strands{}.data".format(str(int(values['_HAIRSTYLE_PREVIEW_SLIDER_'])).zfill(5))
+            configManager.addOne('HAIR_DATA', HAIR_DATA)
+            hair_color_value = values['_hair_color_value_'][1:]
+            HAIR_COLOR = [int(hair_color_value[a:a+2], 16) for a in [0, 2, 4]]
+            configManager.addOne('HAIR_COLOR', HAIR_COLOR)
 
             global_start = time()
             """Geometry"""
@@ -330,6 +328,11 @@ if __name__ == '__main__':
             current_obj_path = os.path.join(DIR_OUT, configManager.getOne("OUT_DATA"))
             current_obj_path = os.path.abspath(current_obj_path)
             window_main.FindElement('_OBJ_PATH_DISPLAY_').Update(current_obj_path)
+            window_main.FindElement('_IMG_PATH_').Update(values['_IMG_PATH_'])
+            window_main.FindElement('_HEAD_OBJ_PATH_').Update(values['_HEAD_OBJ_PATH_'])
+            window_main.FindElement('_OBJ_PATH_').Update(values['_OBJ_PATH_'])
+            window_main.FindElement('_HAIR_NO_INPUT_').Update(str(int(slider_value)))
+            window_main.FindElement('_hair_color_value_').Update(values['_hair_color_value_'])
 
         elif event == 'Show 3D model':
             try:
