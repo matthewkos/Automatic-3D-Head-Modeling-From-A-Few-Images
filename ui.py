@@ -35,20 +35,23 @@ if __name__ == '__main__':
     # Load JSON File Data
     configManager = ConfigManager('.\\config.ini')
     json_data = configManager.getAll()
-    OBJ_HEAD_MODEL_HAIR = json_data["OBJ_HEAD_MODEL_HAIR"]
-    DIR_INPUT = json_data["DIR_INPUT"]
-    DIR_TEXTURE = json_data["DIR_TEXTURE"]
-    DIR_HAIR = json_data["DIR_HAIR"]
-    DIR_MASK = json_data["DIR_MASK"]
-    DIR_OUT = json_data["DIR_OUT"]
-    DIR_KPTS = json_data["DIR_KPTS"]
-    INPUT_DATA = json_data["INPUT_DATA"]
-    TEXTURE_DATA = json_data["TEXTURE_DATA"]
-    HAIR_DATA = json_data["HAIR_DATA"]
-    MASK_DATA = json_data["MASK_DATA"]
-    OUT_DATA = json_data["OUT_DATA"]
-    UI_DISPLAY_WIDTH = json_data["UI_DISPLAY_WIDTH"]
-    UI_DISPLAY_HEIGHT = json_data["UI_DISPLAY_HEIGHT"]
+    OBJ_HEAD_MODEL_HAIR = json_data.get("OBJ_HEAD_MODEL_HAIR", "Data\\hair\\head_model.obj")
+    DIR_INPUT = json_data.get("DIR_INPUT", "Data\\input")
+    DIR_TEXTURE = json_data.get("DIR_TEXTURE", "Data\\texture")
+    DIR_HAIR = json_data.get("DIR_HAIR", "Data\\hair")
+    DIR_MASK = json_data.get("DIR_MASK", "Data\\mask")
+    DIR_OUT = json_data.get("DIR_OUT", "output")
+    DIR_KPTS = json_data.get("DIR_KPTS", "Data\\geometry")
+    INPUT_DATA = json_data.get("INPUT_DATA", "test.jpg")
+    TEXTURE_DATA = json_data.get("DIR_KPTS", "test.jpg")
+    HAIR_DATA = json_data.get("HAIR_DATA", "strands00260.data")
+    MASK_DATA = json_data.get("MASK_DATA", "test.obj")
+    OUT_DATA = json_data.get("OUT_DATA", "test.obj")
+    HAIR = json_data.get('HAIR', True)
+    HAIR_COLOR = json_data.get('HAIR_COLOR', [0, 0, 0])
+    UI_DISPLAY_WIDTH = json_data.get("UI_DISPLAY_WIDTH", 128)
+    UI_DISPLAY_HEIGHT = json_data.get("UI_DISPLAY_HEIGHT", 128)
+    BLENDER_BACKGROUND = json_data.get("BLENDER_BACKGROUND", False)
     del json_data
 
     #################### Setup #######################
@@ -69,12 +72,14 @@ if __name__ == '__main__':
     ##################################################
 
     sg.ChangeLookAndFeel('Black')
-    DEFAULT_INPUT = os.path.abspath(".\\" + DIR_INPUT + "\\" + INPUT_DATA)
-    DEFAULT_INPUT_DISPLAY = os.path.abspath(".\\" + DIR_INPUT + "\\" + INPUT_DATA.replace('.jpg', '.png'))
+    DEFAULT_INPUT = os.path.abspath(os.path.join(DIR_INPUT, INPUT_DATA))
+    DEFAULT_INPUT_DISPLAY = os.path.abspath(os.path.join(".temp", INPUT_DATA.replace('.jpg', '.png')))
     if not os.path.exists(DEFAULT_INPUT_DISPLAY):
-        DEFAULT_INPUT_DISPLAY = os.path.abspath(".\.temp\default_white.png")
+        DEFAULT_INPUT_DISPLAY = os.path.abspath(r".\.temp\default_white.png")
     # TODO: Confirm the default INPUT and OUTPUT
-    DEFAULT_OUTPUT = os.path.abspath(".\\" + DIR_OUT + "\\" + OUT_DATA)
+    DEFAULT_OUTPUT = os.path.abspath(os.path.join(DIR_OUT, OUT_DATA))
+    print(OUT_DATA)
+    print(DEFAULT_OUTPUT)
     DEFAULT_HEAD_OUTPUT = None
     DEFAULT_HAIR_OUTPUT = None
 
@@ -89,13 +94,13 @@ if __name__ == '__main__':
         [sg.Text('Input Image Path:', size=(20, 1)), sg.Text(DEFAULT_INPUT, key='_IMG_PATH_DISPLAY_', size=(50, 1))],
         [sg.Text('2D Frontal Image ', size=(20, 1)), sg.InputText(DEFAULT_INPUT, size=(50, 1), key='_IMG_PATH_'),
          sg.FileBrowse()],
-        [sg.Button('Preview'), sg.Button('Close', key='_close_preview_image_')]
+        [sg.Button('Preview')]
     ]
 
     hairstyle_preview_frame_layout = [
         [sg.Image(filename="Data\\ui_images\\strands00001.png", size=(UI_DISPLAY_WIDTH, UI_DISPLAY_HEIGHT),
-                  key='_HAIR_PREVIEW_1_', visible=True), ],
-        [sg.Slider(range=(1, 514), key='_HAIRSTYLE_PREVIEW_SLIDER_', orientation='h', enable_events=True,
+                  key='_HAIR_PREVIEW_1_', visible=True)],
+        [sg.Slider(range=(1, 343), key='_HAIRSTYLE_PREVIEW_SLIDER_', orientation='h', enable_events=True,
                    disable_number_display=False, size=(20, 15), font=("Helvetica", 10))],
         [sg.Text('No.:', size=(5, 1)), sg.InputText('1', key='_HAIR_NO_INPUT_', size=(15, 1))],
         [sg.Button('Select', key='_SELECT_HAIR_NO_')]
@@ -111,11 +116,11 @@ if __name__ == '__main__':
     generation_panel_frame_layout = [
         [sg.Radio('Full Model', group_id="Generation_Setting", key="_full_model_radio_", default=True), ],
         [sg.Radio('Head Only', group_id="Generation_Setting", key="_head_only_radio_", size=(10, 1)), ],
-        [sg.Radio('Hair Only', group_id="Generation_Setting", key="_hair_only_radio_", size=(10, 1)), ],
-        [sg.Text('Hair Model (.obj) File Path:', size=(20, 1)),
-         sg.InputText(DEFAULT_HAIR_OUTPUT, size=(50, 1), key='_HAIR_OBJ_PATH_'), sg.FileBrowse()],
-        [sg.Text('Head Model (.obj) File Path:', size=(20, 1)),
-         sg.InputText(DEFAULT_HEAD_OUTPUT, size=(50, 1), key='_HEAD_OBJ_PATH_'), sg.FileBrowse()],
+        # [sg.Radio('Hair Only', group_id="Generation_Setting", key="_hair_only_radio_", size=(10, 1)), ],
+        # [sg.Text('Hair Model (.obj) File Path:', size=(20, 1)),
+        #  sg.InputText(DEFAULT_HAIR_OUTPUT, size=(50, 1), key='_HAIR_OBJ_PATH_'), sg.FileBrowse()],
+        [sg.Text('Output File Path (.obj):', size=(20, 1)),
+         sg.InputText(DEFAULT_OUTPUT, size=(50, 1), key='_HEAD_OBJ_PATH_'), sg.FileBrowse()],
         [sg.Checkbox('Blender Background', key="_blender_background_", default=False)],
         [sg.Button('Generate')]
     ]
@@ -165,23 +170,22 @@ if __name__ == '__main__':
                     raise ValueError('Invalid Path')
 
                 input_data = os.path.split(current_img_path)[-1]
-
-                if os.path.isfile(".\\" + DIR_INPUT + ".\\" + input_data):
-                    if not os.path.samefile(".\\" + DIR_INPUT + ".\\" + input_data, current_img_path):
-                        # Rename the new input file if the designated path has a file with same filename
-                        dot_index = input_data.find('.')
-                        input_data = input_data[0:dot_index] + '_{0:%Y%m%d_%H%M%S}'.format(datetime.now()) + input_data[
-                                                                                                             dot_index:]
-                        # Copy the image file to the designated path of config.ini   
-                        new_img_path = ".\\" + DIR_INPUT + ".\\" + input_data
-                        shutil.copy(current_img_path, new_img_path)
-                        current_img_path = os.path.abspath(new_img_path)
-                    else:
-                        current_img_path = os.path.abspath(".\\" + DIR_INPUT + ".\\" + input_data)
-
+                # if os.path.isfile(os.path.join(DIR_INPUT,input_data)):
+                #     if not os.path.samefile(".\\" + DIR_INPUT + ".\\" + input_data, current_img_path):
+                #         # Rename the new input file if the designated path has a file with same filename
+                #         dot_index = input_data.find('.')
+                #         input_data = input_data[0:dot_index] + '_{0:%Y%m%d_%H%M%S}'.format(datetime.now()) + input_data[
+                #                                                                                              dot_index:]
+                #         # Copy the image file to the designated path of config.ini
+                #         new_img_path = ".\\" + DIR_INPUT + ".\\" + input_data
+                #         shutil.copy(current_img_path, new_img_path)
+                #         current_img_path = os.path.abspath(new_img_path)
+                #     else:
+                #         current_img_path = os.path.abspath(".\\" + DIR_INPUT + ".\\" + input_data)
+                current_img_path = os.path.abspath(os.path.join(DIR_INPUT, input_data))
                 if '.png' not in current_img_path:
                     # Try to find a .png file with the same name in the image directory
-                    display_img_path = ".\\" + DIR_INPUT + ".\\" + input_data.replace('.jpg', '.png')
+                    display_img_path = os.path.join(".temp", input_data.replace('.jpg', '.png'))
                     display_img_path = os.path.abspath(display_img_path)
                     if not os.path.isfile(display_img_path):
                         # convert to .png for view
@@ -198,19 +202,17 @@ if __name__ == '__main__':
 
                 window_main.FindElement('_IMG_PATH_').Update(current_img_path)
                 # Show another window for the 2D frontal image
-                window_main.FindElement('_IMG_PATH_DISPLAY_').Update(display_img_path)
+                window_main.FindElement('_IMG_PATH_DISPLAY_').Update(current_img_path)
                 window_main.FindElement('_IMAGE_PREVIEW_').Update(filename=display_img_path,
                                                                   size=(UI_DISPLAY_WIDTH, UI_DISPLAY_HEIGHT),
                                                                   visible=True)
-                window_main.FindElement('_IMG_PREVIEW_FRAME_').Update(visible=True)
+                # window_main.FindElement('_IMG_PREVIEW_FRAME_').Update(visible=True)
             except Exception as err:
                 # Display the error by popup window
                 errmsg = str(err)
                 if len(errmsg) > 100:
                     errmsg = errmsg[:100] + "\n" + errmsg[100:]
                 sg.PopupError(errmsg)
-        # elif event == '_close_preview_image_':
-        #     window_main.FindElement('_IMG_PREVIEW_FRAME_').Update(visible=False)
 
         elif event == '_HAIRSTYLE_PREVIEW_SLIDER_':
             """
@@ -224,6 +226,7 @@ if __name__ == '__main__':
                 window_main.FindElement('_HAIR_PREVIEW_1_').Update(
                     os.path.join("Data", "ui_images", hair_file_name[:-5] + ".png"),
                     size=(UI_DISPLAY_WIDTH, UI_DISPLAY_HEIGHT))
+
 
         elif event == '_SELECT_HAIR_NO_':
             """
@@ -318,12 +321,13 @@ if __name__ == '__main__':
                 MASK_DATA,
                 OUT_DATA,
                 HAIR,
+                HAIR_COLOR,
                 BLENDER_BACKGROUND))
             print("Output to: {}".format(os.path.join(os.getcwd(), DIR_OUT, OUT_DATA)))
             print("Total_time: {:.2f}".format(time() - global_start))
 
             # After Generation:
-            current_obj_path = ".\\" + DIR_OUT + "\\" + configManager.getOne("OUT_DATA")
+            current_obj_path = os.path.join(DIR_OUT, configManager.getOne("OUT_DATA"))
             current_obj_path = os.path.abspath(current_obj_path)
             window_main.FindElement('_OBJ_PATH_DISPLAY_').Update(current_obj_path)
 

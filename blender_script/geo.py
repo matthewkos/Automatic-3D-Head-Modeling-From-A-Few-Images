@@ -322,7 +322,7 @@ def gen_hair(file_name):
     return
 
 
-def import_test_head(file_loc = None):
+def import_test_head(file_loc=None):
     scene = bpy.context.scene
     scene.objects.active = None
     if file_loc is None:
@@ -424,7 +424,7 @@ class HeadMask_Align:
         left_ind += self.FACE_COUNT
         fore_ind += self.FACE_COUNT
         jaw_ind += self.FACE_COUNT
-        
+
         return kpt_ind, left_ind, fore_ind, jaw_ind, ind_bound, ear_ind
 
     def get_scale(self, face, head):
@@ -638,7 +638,7 @@ def modify_hair():
     return
 
 
-def color_hair():
+def color_hair(COLOR):
     select('Hair')
     bpy.context.scene.objects.active = bpy.data.objects['Hair']
     # Get material
@@ -654,16 +654,22 @@ def color_hair():
     else:
         # no slots
         bpy.data.objects['Hair'].data.materials.append(mat)
-    mat.use_nodes = True
-    # bpy.ops.cycles.use_shading_nodes()
-    matnodes = mat.node_tree.nodes
-    matnodes.remove(matnodes['Diffuse BSDF'])
+    # no node
 
-    texture = matnodes.new("ShaderNodeBsdfHair")
-    matnodes["Hair BSDF"].inputs[0].default_value = (0, 0, 0, 1)
-    mat.node_tree.links.new(matnodes["Material Output"].inputs[0], texture.outputs[0])
-    mat.node_tree.links.new(matnodes["Material Output"].inputs[1], texture.outputs[0])
-    mat.node_tree.links.new(matnodes["Material Output"].inputs[2], texture.outputs[0])
+    mat.use_nodes = False
+    bpy.data.objects['Hair'].active_material.diffuse_color = COLOR
+
+    #
+    # mat.use_nodes = True
+    # # bpy.ops.cycles.use_shading_nodes()
+    # matnodes = mat.node_tree.nodes
+    # matnodes.remove(matnodes['Diffuse BSDF'])
+    #
+    # texture = matnodes.new("ShaderNodeBsdfHair")
+    # matnodes["Hair BSDF"].inputs[0].default_value = (0, 0, 0, 1)
+    # mat.node_tree.links.new(matnodes["Material Output"].inputs[0], texture.outputs[0])
+    # mat.node_tree.links.new(matnodes["Material Output"].inputs[1], texture.outputs[0])
+    # mat.node_tree.links.new(matnodes["Material Output"].inputs[2], texture.outputs[0])
     return
 
 
@@ -706,8 +712,10 @@ if __name__ == '__main__':
         MASK_DATA = json_data["MASK_DATA"]
         OUT_DATA = json_data["OUT_DATA"]
         HAIR = json_data["HAIR"]
+        HAIR_COLOR = json_data.get('HAIR_COLOR', (0,0,0))
         del json_data
 
+    HAIR_COLOR = (HAIR_COLOR[0] / 255, HAIR_COLOR[1] / 255, HAIR_COLOR[2] / 255)
     """
     Face
     """
@@ -729,7 +737,7 @@ if __name__ == '__main__':
         import_hair(os.path.join(DIR_HAIR, HAIR_DATA))
         align_head_hair()
         modify_hair()
-        color_hair()
+        color_hair(HAIR_COLOR)
         object_mode('Hair')
 
     # join
@@ -740,7 +748,7 @@ if __name__ == '__main__':
     bpy.data.objects['Head'].select = True
     bpy.data.objects['Face'].select = True
     # if HAIR:
-        # bpy.data.objects['Hair'].select = True
+    # bpy.data.objects['Hair'].select = True
     bpy.ops.object.join()
 
     # change viewpoint
@@ -749,3 +757,5 @@ if __name__ == '__main__':
     space.viewport_shade = 'TEXTURED'  # set the viewport shading
 
     output(os.path.join(DIR_OUT, OUT_DATA))
+    for item in bpy.context.copy()['selected_editable_objects']:
+        item.select = False
