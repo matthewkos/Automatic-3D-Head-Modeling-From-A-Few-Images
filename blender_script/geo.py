@@ -402,7 +402,7 @@ class HeadMask_Align:
 
         bottom_y = temp2[1] - np.mean(jaw[:, 1], axis=0)
         bottom_z = temp2[2] - np.mean(jaw[:, 2], axis=0)
-        bpy.ops.transform.translate(value=(0, -bottom_z, -bottom_y), constraint_axis=(False, False, False),
+        bpy.ops.transform.translate(value=(0, -bottom_y, -bottom_z), constraint_axis=(False, False, False),
                                     constraint_orientation='GLOBAL', mirror=False, proportional='CONNECTED',
                                     proportional_edit_falloff='SMOOTH', proportional_size=1)
         bpy.ops.mesh.select_all(action='DESELECT')
@@ -765,7 +765,7 @@ if __name__ == '__main__':
     # if HAIR:
     # bpy.data.objects['Hair'].select = True
     bpy.ops.object.join()
-    align.make_face()
+    # align.make_face()
 
     # change viewpoint
     area = next(area for area in bpy.context.screen.areas if area.type == 'VIEW_3D')

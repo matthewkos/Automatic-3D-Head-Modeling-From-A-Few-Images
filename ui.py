@@ -58,7 +58,6 @@ if __name__ == '__main__':
 
     warnings.filterwarnings("ignore")
 
-
     ##################################################
 
     sg.ChangeLookAndFeel('Black')
@@ -241,99 +240,102 @@ if __name__ == '__main__':
                 window_main.FindElement('_HEAD_OBJ_PATH_').Update(values['_HEAD_OBJ_PATH_'])
                 window_main.FindElement('_OBJ_PATH_').Update(values['_OBJ_PATH_'])
                 window_main.FindElement('_HAIR_NO_INPUT_').Update(str(int(slider_value)))
+                window_main.FindElement('_HAIRSTYLE_PREVIEW_SLIDER_').Update((int(slider_value)))
                 window_main.FindElement('_hair_color_value_').Update(values['_hair_color_value_'])
 
         elif event == 'Generate':
             """
             Generate
             """
-            tf.reset_default_graph()
-            # Update the input image path in config.ini
+            try:
+                tf.reset_default_graph()
+                # Update the input image path in config.ini
 
-            current_img_path = values['_IMG_PATH_'] if values['_IMG_PATH_'] != '' else current_img_path
-            if not os.path.isfile(current_img_path):
-                raise ValueError('Invalid Path')
-            slider_value = values['_HAIRSTYLE_PREVIEW_SLIDER_']
-            HAIR_DATA = "strands{}.data".format(str(int(slider_value)).zfill(5))
-            if os.path.exists(os.path.join(DIR_HAIR, HAIR_DATA)):
+                current_img_path = values['_IMG_PATH_'] if values['_IMG_PATH_'] != '' else current_img_path
+                if not os.path.isfile(current_img_path):
+                    raise ValueError('Invalid Path')
+                slider_value = values['_HAIRSTYLE_PREVIEW_SLIDER_']
+                HAIR_DATA = "strands{}.data".format(str(int(slider_value)).zfill(5))
+                if os.path.exists(os.path.join(DIR_HAIR, HAIR_DATA)):
+                    configManager.addOne('HAIR_DATA', HAIR_DATA)
+                    window_main.FindElement('_HAIR_PREVIEW_1_').Update(
+                        os.path.join("Data", "ui_images", HAIR_DATA[:-5] + ".png"),
+                        size=(UI_DISPLAY_WIDTH, UI_DISPLAY_HEIGHT))
+                INPUT_DATA = input_data = os.path.split(current_img_path)[-1]
+                TEXTURE_DATA = input_data[:-4] + '.jpg'
+                MASK_DATA = input_data[:-4] + '.obj'
+                OUT_DATA = input_data[:-4] + '.obj'
+                configManager.addOne('INPUT_DATA', input_data)
+                configManager.addOne('TEXTURE_DATA', TEXTURE_DATA)
+                configManager.addOne('MASK_DATA', MASK_DATA)
+                configManager.addOne('OUT_DATA', OUT_DATA)
+                if current_img_path == "":
+                    # use default image if user does not input a path before
+                    print("Empty image path input.")
+                    print("Use default image path:", DEFAULT_INPUT)
+                    current_img_path = DEFAULT_INPUT
+
+                # Change to relative path
+                relative_current_img_path = os.path.relpath(current_img_path, os.getcwd())
+                assert os.path.exists(relative_current_img_path), "Invalid path: " + relative_current_img_path
+
+                # Update the BLENDER_BACKGROUND setting in config.ini
+                configManager.addOne('BLENDER_BACKGROUND', values["_blender_background_"])
+                BLENDER_BACKGROUND = values["_blender_background_"]
+                HAIR = None
+                if values["_full_model_radio_"]:
+                    HAIR = True
+                elif values["_head_only_radio_"]:
+                    HAIR = False
+                configManager.addOne('HAIR', HAIR)
+                HAIR_DATA = "strands{}.data".format(str(int(values['_HAIRSTYLE_PREVIEW_SLIDER_'])).zfill(5))
                 configManager.addOne('HAIR_DATA', HAIR_DATA)
-                window_main.FindElement('_HAIR_PREVIEW_1_').Update(
-                    os.path.join("Data", "ui_images", HAIR_DATA[:-5] + ".png"),
-                    size=(UI_DISPLAY_WIDTH, UI_DISPLAY_HEIGHT))
-            INPUT_DATA = input_data = os.path.split(current_img_path)[-1]
-            TEXTURE_DATA = input_data[:-4] + '.jpg'
-            MASK_DATA = input_data[:-4] + '.obj'
-            OUT_DATA = input_data[:-4] + '.obj'
-            configManager.addOne('INPUT_DATA', input_data)
-            configManager.addOne('TEXTURE_DATA', TEXTURE_DATA)
-            configManager.addOne('MASK_DATA', MASK_DATA)
-            configManager.addOne('OUT_DATA', OUT_DATA)
-            if current_img_path == "":
-                # use default image if user does not input a path before
-                print("Empty image path input.")
-                print("Use default image path:", DEFAULT_INPUT)
-                current_img_path = DEFAULT_INPUT
+                hair_color_value = values['_hair_color_value_'][1:]
+                HAIR_COLOR = [int(hair_color_value[a:a + 2], 16) for a in [0, 2, 4]]
+                configManager.addOne('HAIR_COLOR', HAIR_COLOR)
 
-            # Change to relative path
-            relative_current_img_path = os.path.relpath(current_img_path, os.getcwd())
-            assert os.path.exists(relative_current_img_path), "Invalid path: " + relative_current_img_path
+                global_start = time()
+                """Geometry"""
+                time_it_wrapper(None, "Generating Geometry")
+                """Mask"""
+                time_it_wrapper(genPRMask, "Generating Mask", args=(
+                    os.path.join(DIR_INPUT, INPUT_DATA),
+                    DIR_MASK),
+                                kwargs={'isMask': False})
+                """Texture"""
+                time_it_wrapper(genText, "Generating Texture", args=(
+                    os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])),  # input full
+                    os.path.join(DIR_MASK, "{}_texture_2.png".format(MASK_DATA[:-4])),  # input half
+                    os.path.join(DIR_TEXTURE, TEXTURE_DATA),  # output texture for head
+                    os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])),  # output texture for mask
+                    (512, 512, 3)
+                ))
+                """Alignment"""
+                time_it_wrapper(blender_wrapper, "Alignment", args=(
+                    ".\\new_geometry.blend",
+                    ".\\blender_script\\geo.py",
+                    INPUT_DATA,
+                    TEXTURE_DATA,
+                    HAIR_DATA,
+                    MASK_DATA,
+                    OUT_DATA,
+                    HAIR,
+                    HAIR_COLOR,
+                    BLENDER_BACKGROUND))
+                print("Output to: {}".format(os.path.join(os.getcwd(), DIR_OUT, OUT_DATA)))
+                print("Total_time: {:.2f}".format(time() - global_start))
 
-            # Update the BLENDER_BACKGROUND setting in config.ini
-            configManager.addOne('BLENDER_BACKGROUND', values["_blender_background_"])
-            BLENDER_BACKGROUND = values["_blender_background_"]
-            HAIR = None
-            if values["_full_model_radio_"]:
-                HAIR = True
-            elif values["_head_only_radio_"]:
-                HAIR = False
-            configManager.addOne('HAIR', HAIR)
-            HAIR_DATA = "strands{}.data".format(str(int(values['_HAIRSTYLE_PREVIEW_SLIDER_'])).zfill(5))
-            configManager.addOne('HAIR_DATA', HAIR_DATA)
-            hair_color_value = values['_hair_color_value_'][1:]
-            HAIR_COLOR = [int(hair_color_value[a:a+2], 16) for a in [0, 2, 4]]
-            configManager.addOne('HAIR_COLOR', HAIR_COLOR)
-
-            global_start = time()
-            """Geometry"""
-            time_it_wrapper(None, "Generating Geometry")
-            """Mask"""
-            time_it_wrapper(genPRMask, "Generating Mask", args=(
-                os.path.join(DIR_INPUT, INPUT_DATA),
-                DIR_MASK),
-                            kwargs={'isMask': False})
-            """Texture"""
-            time_it_wrapper(genText, "Generating Texture", args=(
-                os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])),  # input full
-                os.path.join(DIR_MASK, "{}_texture_2.png".format(MASK_DATA[:-4])),  # input half
-                os.path.join(DIR_TEXTURE, TEXTURE_DATA),  # output texture for head
-                os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])),  # output texture for mask
-                (512, 512, 3)
-            ))
-            """Alignment"""
-            time_it_wrapper(blender_wrapper, "Alignment", args=(
-                ".\\new_geometry.blend",
-                ".\\blender_script\\geo.py",
-                INPUT_DATA,
-                TEXTURE_DATA,
-                HAIR_DATA,
-                MASK_DATA,
-                OUT_DATA,
-                HAIR,
-                HAIR_COLOR,
-                BLENDER_BACKGROUND))
-            print("Output to: {}".format(os.path.join(os.getcwd(), DIR_OUT, OUT_DATA)))
-            print("Total_time: {:.2f}".format(time() - global_start))
-
-            # After Generation:
-            current_obj_path = os.path.join(DIR_OUT, configManager.getOne("OUT_DATA"))
-            current_obj_path = os.path.abspath(current_obj_path)
-            window_main.FindElement('_OBJ_PATH_DISPLAY_').Update(current_obj_path)
-            window_main.FindElement('_IMG_PATH_').Update(values['_IMG_PATH_'])
-            window_main.FindElement('_HEAD_OBJ_PATH_').Update(values['_HEAD_OBJ_PATH_'])
-            window_main.FindElement('_OBJ_PATH_').Update(values['_OBJ_PATH_'])
-            window_main.FindElement('_HAIR_NO_INPUT_').Update(str(int(slider_value)))
-            window_main.FindElement('_hair_color_value_').Update(values['_hair_color_value_'])
-
+                # After Generation:
+                current_obj_path = os.path.join(DIR_OUT, configManager.getOne("OUT_DATA"))
+                current_obj_path = os.path.abspath(current_obj_path)
+                window_main.FindElement('_OBJ_PATH_DISPLAY_').Update(current_obj_path)
+                window_main.FindElement('_IMG_PATH_').Update(values['_IMG_PATH_'])
+                window_main.FindElement('_HEAD_OBJ_PATH_').Update(values['_HEAD_OBJ_PATH_'])
+                window_main.FindElement('_OBJ_PATH_').Update(values['_OBJ_PATH_'])
+                window_main.FindElement('_HAIR_NO_INPUT_').Update(str(int(slider_value)))
+                window_main.FindElement('_hair_color_value_').Update(values['_hair_color_value_'])
+            except Exception as e:
+                print("Error:", e)
         elif event == 'Show 3D model':
             try:
                 current_obj_path = values['_OBJ_PATH_'] if values['_OBJ_PATH_'] != '' else current_obj_path
