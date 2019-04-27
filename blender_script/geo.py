@@ -181,6 +181,7 @@ def get_upper_head_abs(matrix_world):
     # matrix_world = head.matrix_world
     Y_REF = 987
     Z_REF = 987
+    Z_REF2 = 940
     head = select('Head')
     bm = bmesh.new()
     bm.from_object(head, get_scene())
@@ -188,6 +189,8 @@ def get_upper_head_abs(matrix_world):
     vertlist = to_abs_coord([v.co.copy() for v in bmv], matrix_world)
     ref_point_z = to_abs_coord(bmv[Z_REF].co, matrix_world)  #
     ref_point_y = to_abs_coord(bmv[Y_REF].co, matrix_world)  # bmv[17869]
+    ref_point_z2 = to_abs_coord(bmv[Z_REF2].co, matrix_world)  #
+
     upperHead = list(filter(lambda v: v.z >= ref_point_z.z and v.y >= ref_point_y.y, vertlist)).copy()
     return upperHead
 
@@ -572,7 +575,18 @@ class HeadMask_Align:
     def make_face(self):
         edit_mode('Head')
 
-        verts = [592, 593, 594, 608, 610, 1545, 1546, 1547, 1556, 1558, 1563, 1564, 1570, 4771, 4772, 4775, 4778, 5691, 5692, 5700, 5701, 5711, 5712, 5715, 8428, 8429, 8431, 8433, 8435, 8436, 8438, 8440, 8442, 8444, 8446, 8448, 8450, 8451, 8453, 8455, 8456, 8457, 8458, 8460, 8462, 8463, 8464, 8466, 8468, 8470, 8471, 8473, 8474, 8475, 8476, 8478, 8480, 8481, 8482, 8484, 8486, 8487, 8488, 8490, 8492, 8494, 8495, 8497, 8498, 8499, 8500, 8502, 8503, 8504, 8505, 8507, 8509, 8510, 8511, 8513, 8514, 8516, 8517, 8519, 8520, 8521, 8522, 8524, 8525, 8526, 8527, 8529, 8530, 8532, 8533, 8535, 8536, 8538, 8539, 8541, 8542, 8544, 8545, 8547, 8548, 8549, 8550, 8552, 8553, 8555, 8556, 8558, 8559, 8561, 8562, 8564, 8565, 8566, 8567, 8569, 8570, 8571, 8572, 8574, 8575, 8576, 8577, 8579, 8580, 8581, 8582, 8584, 8585, 8586, 8587, 8589, 8590, 8591, 8593, 8594, 8596, 8597, 8599, 8600, 8602, 8603, 8604, 8606, 8608, 8609, 8611, 8612, 8614, 8615, 8616, 8617, 8618, 8620, 8621, 8622, 8623, 8625, 8626, 8628, 8629, 8632, 8633, 8634, 8636, 8638, 8639, 8640, 8642, 8643, 8644, 8645, 8647, 8648, 8650, 8651, 8653, 8654, 8656, 8657, 8659, 8660, 8662, 8664, 8665, 8666, 8667]
+        verts = [592, 593, 594, 608, 610, 1545, 1546, 1547, 1556, 1558, 1563, 1564, 1570, 4771, 4772, 4775, 4778, 5691,
+                 5692, 5700, 5701, 5711, 5712, 5715, 8428, 8429, 8431, 8433, 8435, 8436, 8438, 8440, 8442, 8444, 8446,
+                 8448, 8450, 8451, 8453, 8455, 8456, 8457, 8458, 8460, 8462, 8463, 8464, 8466, 8468, 8470, 8471, 8473,
+                 8474, 8475, 8476, 8478, 8480, 8481, 8482, 8484, 8486, 8487, 8488, 8490, 8492, 8494, 8495, 8497, 8498,
+                 8499, 8500, 8502, 8503, 8504, 8505, 8507, 8509, 8510, 8511, 8513, 8514, 8516, 8517, 8519, 8520, 8521,
+                 8522, 8524, 8525, 8526, 8527, 8529, 8530, 8532, 8533, 8535, 8536, 8538, 8539, 8541, 8542, 8544, 8545,
+                 8547, 8548, 8549, 8550, 8552, 8553, 8555, 8556, 8558, 8559, 8561, 8562, 8564, 8565, 8566, 8567, 8569,
+                 8570, 8571, 8572, 8574, 8575, 8576, 8577, 8579, 8580, 8581, 8582, 8584, 8585, 8586, 8587, 8589, 8590,
+                 8591, 8593, 8594, 8596, 8597, 8599, 8600, 8602, 8603, 8604, 8606, 8608, 8609, 8611, 8612, 8614, 8615,
+                 8616, 8617, 8618, 8620, 8621, 8622, 8623, 8625, 8626, 8628, 8629, 8632, 8633, 8634, 8636, 8638, 8639,
+                 8640, 8642, 8643, 8644, 8645, 8647, 8648, 8650, 8651, 8653, 8654, 8656, 8657, 8659, 8660, 8662, 8664,
+                 8665, 8666, 8667]
         obj = bpy.context.object
         bm = bmesh.from_edit_mesh(obj.data)
         ob = bpy.data.objects['Head']
@@ -584,6 +598,7 @@ class HeadMask_Align:
             bm.verts[i].select = True
         bpy.ops.mesh.edge_face_add()
         return
+
 
 def align_head_hair():
     hair = select('Hair')
@@ -624,6 +639,8 @@ def align_head_hair():
     diff = ((n1 - d1) + (n2 - d2) + (n3 - d3) + (n4 - d4)) / 4
     object_mode('Hair')
     move(*list(diff))
+    scale(1, 1.05, 1)
+    move(0, 0.15, -0.13)
     return
 
 
@@ -634,22 +651,31 @@ def modify_hair():
     bpy.ops.mesh.remove_doubles()
     object_mode('Hair')
 
-    bpy.ops.object.modifier_add(type='DECIMATE')
-    bpy.context.object.modifiers["Decimate"].ratio = 1
-    bpy.context.object.modifiers["Decimate"].use_collapse_triangulate = True
-    bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Decimate")
+    # bpy.ops.object.modifier_add(type='DECIMATE')
+    # bpy.context.object.modifiers["Decimate"].ratio = 0.6
+    # bpy.context.object.modifiers["Decimate"].use_collapse_triangulate = True
+    # bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Decimate")
 
     bpy.ops.object.modifier_add(type='SOLIDIFY')
     bpy.context.object.modifiers["Solidify"].thickness_clamp = 1
     bpy.context.object.modifiers["Solidify"].offset = 0
-    bpy.context.object.modifiers["Solidify"].thickness = 0.005  # 0.001-0.003
-    bpy.context.object.modifiers["Solidify"].use_rim = False
+    bpy.context.object.modifiers["Solidify"].thickness = 0.001  # 0.001-0.003
+    bpy.context.object.modifiers["Solidify"].use_rim = True
     bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Solidify")
 
-    bpy.ops.object.modifier_add(type='DECIMATE')
-    bpy.context.object.modifiers["Decimate"].ratio = 1
-    bpy.context.object.modifiers["Decimate"].use_collapse_triangulate = True
-    bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Decimate")
+    # bpy.ops.object.modifier_add(type='DECIMATE')
+    # bpy.context.object.modifiers["Decimate"].ratio = 0.5
+    # bpy.context.object.modifiers["Decimate"].use_collapse_triangulate = True
+    # bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Decimate")
+
+    # bpy.ops.object.modifier_add(type='SOLIDIFY')
+    # bpy.context.object.modifiers["Solidify"].thickness_clamp = 1
+    # bpy.context.object.modifiers["Solidify"].offset = 0
+    # bpy.context.object.modifiers["Solidify"].thickness = 0.0005  # 0.001-0.003
+    # bpy.context.object.modifiers["Solidify"].use_rim = True
+    # bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Solidify")
+
+
 
     return
 
@@ -728,7 +754,7 @@ if __name__ == '__main__':
         MASK_DATA = json_data["MASK_DATA"]
         OUT_DATA = json_data["OUT_DATA"]
         HAIR = json_data["HAIR"]
-        HAIR_COLOR = json_data.get('HAIR_COLOR', (0,0,0))
+        HAIR_COLOR = json_data.get('HAIR_COLOR', (0, 0, 0))
         del json_data
 
     HAIR_COLOR = (HAIR_COLOR[0] / 255, HAIR_COLOR[1] / 255, HAIR_COLOR[2] / 255)
@@ -772,6 +798,6 @@ if __name__ == '__main__':
     space = next(space for space in area.spaces if space.type == 'VIEW_3D')
     space.viewport_shade = 'TEXTURED'  # set the viewport shading
 
-    output(os.path.join(DIR_OUT, OUT_DATA))
+    # output(os.path.join(DIR_OUT, OUT_DATA))
     for item in bpy.context.copy()['selected_editable_objects']:
         item.select = False

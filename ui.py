@@ -66,7 +66,7 @@ if __name__ == '__main__':
     if not os.path.exists(DEFAULT_INPUT_DISPLAY):
         DEFAULT_INPUT_DISPLAY = os.path.abspath(r".\.temp\default_white.png")
     # TODO: Confirm the default INPUT and OUTPUT
-    DEFAULT_OUTPUT = os.path.abspath(os.path.join(DIR_OUT, OUT_DATA))
+    DEFAULT_OUTPUT = os.path.abspath(DIR_OUT)
     DEFAULT_HEAD_OUTPUT = None
     DEFAULT_HAIR_OUTPUT = None
 
@@ -106,7 +106,7 @@ if __name__ == '__main__':
         # [sg.Radio('Hair Only', group_id="Generation_Setting", key="_hair_only_radio_", size=(10, 1)), ],
         # [sg.Text('Hair Model (.obj) File Path:', size=(20, 1)),
         #  sg.InputText(DEFAULT_HAIR_OUTPUT, size=(50, 1), key='_HAIR_OBJ_PATH_'), sg.FileBrowse()],
-        [sg.Text('Output File Path (.obj):', size=(20, 1)),
+        [sg.Text('Output File Directory Path:', size=(20, 1)),
          sg.InputText(DEFAULT_OUTPUT, size=(50, 1), key='_HEAD_OBJ_PATH_'), sg.FileBrowse()],
         [sg.Checkbox('Run Blender in  background', key="_blender_background_", default=False)],
         [sg.Button('Generate')]
@@ -252,6 +252,7 @@ if __name__ == '__main__':
                 # Update the input image path in config.ini
 
                 current_img_path = values['_IMG_PATH_'] if values['_IMG_PATH_'] != '' else current_img_path
+                # OUT_DIR = values['']
                 if not os.path.isfile(current_img_path):
                     raise ValueError('Invalid Path')
                 slider_value = values['_HAIRSTYLE_PREVIEW_SLIDER_']
@@ -265,6 +266,8 @@ if __name__ == '__main__':
                 TEXTURE_DATA = input_data[:-4] + '.jpg'
                 MASK_DATA = input_data[:-4] + '.obj'
                 OUT_DATA = input_data[:-4] + '.obj'
+                DIR_OUT = values['_HEAD_OBJ_PATH_']
+                configManager.addOne('DIR_OUT', DIR_OUT.split("\\")[-1])
                 configManager.addOne('INPUT_DATA', input_data)
                 configManager.addOne('TEXTURE_DATA', TEXTURE_DATA)
                 configManager.addOne('MASK_DATA', MASK_DATA)

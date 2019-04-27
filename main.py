@@ -274,8 +274,12 @@ def genText(img_path_full, img_path_half, output_head_path, output_mask_path, si
 def image_expansion_execute(img_BGR):
     img_HSV = cv2.cvtColor(img_BGR, cv2.COLOR_BGR2HSV).astype(np.float64)
     avg_color = img_HSV[np.logical_and(img_HSV.sum(-1) > 30, img_HSV.sum(-1) < 700)].mean(0)
-    maskHSV = cv2.inRange(img_HSV, avg_color - np.array([20, 30, 20], dtype=np.float64),
-                          avg_color + np.array([20, 30, 20], dtype=np.float64))
+    maskHSV = cv2.inRange(img_HSV, avg_color - np.array([20, 35, 35], dtype=np.float64),
+                          avg_color + np.array([20, 35, 35], dtype=np.float64))
+    masked_HSV = cv2.bitwise_and(img_HSV, img_HSV, mask=maskHSV)
+    avg_color = img_HSV[np.logical_and(masked_HSV.sum(-1) > 30, masked_HSV.sum(-1) < 700)].mean(0)
+    maskHSV = cv2.inRange(img_HSV, avg_color - np.array([20, 30, 30], dtype=np.float64),
+                          avg_color + np.array([20, 30, 30], dtype=np.float64))
     for i in range(maskHSV.shape[0]):
         t = maskHSV[i].nonzero()[0].flatten()
         if t.size > 1:
@@ -525,4 +529,4 @@ def test_texture(img_path_full, img_path_half):
 
 if __name__ == '__main__':
     main('orbo.jpg', "strands00357.data")
-    # test_texture("Data/mask/orbo_texture_3.png", "Data/mask/orbo_texture_2.png")
+    test_texture("Data/mask/orbo_texture_3.png", "Data/mask/orbo_texture_2.png")
