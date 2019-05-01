@@ -59,5 +59,5 @@ input only the filename (e.g. 0.jpg)
 
 ## Display UI
 
--
+![image](GUI.jpeg "Preview")
 
