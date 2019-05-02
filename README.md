@@ -31,7 +31,10 @@ pip install -r requirment.txt
 
 Windows: 
 ```
-mklink /D <BLENDER FOLDER> Blender
+mklink /d <NEW BLENDER FOLDER> <ORIGINAL BLENDER FOLDER>
+
+e.g. mklink /d "C:\Users\orkap\Desktop\FYP\Blender" "C:\Program Files\Blender Foundation\Blender"
+
 ```
 Mac/Linux:
 ``` 
@@ -53,7 +56,7 @@ Download [link](https://drive.google.com/file/d/1UoE-XuW1SDLUjZmJPkIZ1MLxvQFgmTF
 put input image (.jpg) under .\Data\input
 
 ```
-python main.py
+python ui.py
 ```
 input only the filename (e.g. 0.jpg)
 

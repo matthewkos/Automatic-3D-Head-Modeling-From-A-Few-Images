@@ -11,6 +11,7 @@ from MeshViewer import MeshViewer
 from DataHelper import ConfigManager
 from main import *
 import tensorflow as tf
+import webbrowser
 
 
 class ImageViewer(object):
@@ -72,9 +73,10 @@ if __name__ == '__main__':
 
     # Menu Frame Layout
     # Menu Definition
-    menu_bar_def = [['&File', ['&Open', '&Save', '---', 'Properties', 'E&xit']],
-                    ['&Edit', ['Redo', 'Undo'], ],
-                    ['&Help', '&About...'], ]
+    menu_bar_def = [['&File', ['&Open', '&Save', '---', 'Properties', 'Exit']],
+                    # ['&Edit', ['Redo', 'Undo'], ],
+                    ['&Help', ['About'], ]
+    ]
 
     # Input Frame Layout
     input_frame_layout = [
@@ -147,6 +149,7 @@ if __name__ == '__main__':
 
     current_img_path = ''
     current_obj_path = ''
+    github_url = "https://github.com/fyp-sb3-mxj3/d50826df94911c26dc5e2f3db6f2fea2/tree/ludwig"
 
     ########## load PRNET ##########
     print("Importing packages: ")
@@ -165,7 +168,21 @@ if __name__ == '__main__':
         print(event, values)
         if event is None or event == 'Exit':
             break
-        if event == 'Preview':
+
+        elif event == 'Open' or event == 'Save' or event == 'Properties':
+            sg.Popup('Currently Unavailable')
+        
+        elif event == 'About':
+            about_return_val = sg.PopupOKCancel('''
+            Automatic 3D Head Modeling From A Few Images
+            CHEUNG Yik Kin, KOO Tin Lok , OR Ka Po @ Hong Kong University of Science and Technology
+            Final Year Project - ELEC4900 SB3-18 | COMP4901 MXJ3
+            Please click OK to browse the Github repository for more information.
+            ''')
+            if about_return_val =='OK':
+                webbrowser.open_new_tab(github_url)
+
+        elif event == 'Preview':
             """
             Preview
             """
