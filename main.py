@@ -241,17 +241,28 @@ def getTFsess():
 #     new_img = new_img.round().clip(0, 255).astype(np.uint8)
 #     return new_img
 
+def process_copy(img_full,img_half):
+    for _y in range(img_full.shape[0]):
+        t = np.argwhere(img_half[_y].sum(-1) > 0).flatten()
+        if t.size > 0:
+            k = 4
+            left_edge = np.min(t)
+            right_edge = np.max(t)
+            img_half[_y, left_edge:right_edge] = img_full[_y, left_edge:right_edge]
+    return img_half
 
-def genText(img_path, output_head_path, output_mask_path, size=None):
+def genText(img_path_full, img_path_half, output_head_path, output_mask_path, size=None):
     assert size is None or (type(size) == tuple and len(size) == 3)
 
-    img = cv2.imread(img_path)
+    img_full = cv2.imread(img_path_full)
+    img_half = cv2.imread(img_path_half)
+    img = process_copy(img_full, img_half)
     if size is None:
         size = img.shape
     new_img = np.zeros(size, dtype=np.uint8)
     internal = (
         (size[0] * 3 // 5 - img.shape[0] // 2), (size[0] * 3 // 5 + img.shape[0] // 2), (size[1] - img.shape[1]) // 2,
-        (size[1] + img.shape[1]) // 2)
+        (size[1] + img_full.shape[1]) // 2)
     new_img[internal[0]:internal[1], internal[2]:internal[3], :] = img
     img = image_expansion_execute(new_img)
     cv2.imwrite(output_head_path, img)
@@ -262,9 +273,13 @@ def genText(img_path, output_head_path, output_mask_path, size=None):
 
 def image_expansion_execute(img_BGR):
     img_HSV = cv2.cvtColor(img_BGR, cv2.COLOR_BGR2HSV).astype(np.float64)
-    avg_color = img_HSV[np.logical_and(img_HSV.sum(-1) > 10, img_HSV.sum(-1) < 700)].mean(0)
-    maskHSV = cv2.inRange(img_HSV, avg_color - np.array([5, 30, 30], dtype=np.float64),
-                          avg_color + np.array([10, 25, 25], dtype=np.float64))
+    avg_color = img_HSV[np.logical_and(img_HSV.sum(-1) > 30, img_HSV.sum(-1) < 700)].mean(0)
+    maskHSV = cv2.inRange(img_HSV, avg_color - np.array([20, 35, 35], dtype=np.float64),
+                          avg_color + np.array([20, 35, 35], dtype=np.float64))
+    masked_HSV = cv2.bitwise_and(img_HSV, img_HSV, mask=maskHSV)
+    avg_color = img_HSV[np.logical_and(masked_HSV.sum(-1) > 30, masked_HSV.sum(-1) < 700)].mean(0)
+    maskHSV = cv2.inRange(img_HSV, avg_color - np.array([20, 30, 30], dtype=np.float64),
+                          avg_color + np.array([20, 30, 30], dtype=np.float64))
     for i in range(maskHSV.shape[0]):
         t = maskHSV[i].nonzero()[0].flatten()
         if t.size > 1:
@@ -280,20 +295,24 @@ def image_expansion_execute(img_BGR):
             k = 4
             left_edge[_y] = np.min(t) + k
             right_edge[_y] = np.max(t) - k
+            # left_edge__y_ = left_edge[_y] // 2
+            # right_edge__y_ = (new_img.shape[1] + right_edge[_y]) // 2
+            left_edge__y_ = max(0, left_edge[_y] - 30)
+            right_edge__y_ = min(new_img.shape[1], right_edge[_y] + 30)
             kind = "slinear"
-            x_fit = np.concatenate(([left_edge[_y] // 2], np.arange(left_edge[_y], left_edge[_y] + k)), 0)
+            x_fit = np.concatenate(([left_edge__y_], np.arange(left_edge[_y], left_edge[_y] + k)), 0)
             y_fit = np.concatenate((avg_color.reshape(1, 3), new_img[_y, left_edge[_y]:left_edge[_y] + k, :]), 0)
             fl = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
             x_fit = np.concatenate(
-                ([(new_img.shape[1] + right_edge[_y]) // 2], np.arange(right_edge[_y] - k, right_edge[_y])), 0)
+                ([right_edge__y_], np.arange(right_edge[_y] - k, right_edge[_y])), 0)
             y_fit = np.concatenate((avg_color.reshape(1, 3), new_img[_y, right_edge[_y] - k: right_edge[_y], :]), 0)
             fr = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
-            new_img[_y, left_edge[_y] // 2:left_edge[_y], :] = fl(np.arange(left_edge[_y] // 2, left_edge[_y])).clip(0,
-                                                                                                                     255)
-            new_img[_y, right_edge[_y]:(new_img.shape[1] + right_edge[_y]) // 2, :] = fr(
-                np.arange(right_edge[_y], (new_img.shape[1] + right_edge[_y]) // 2)).clip(0, 255)
-            new_img[_y, :left_edge[_y] // 2, :] = avg_color
-            new_img[_y, (new_img.shape[1] + right_edge[_y]) // 2:, :] = avg_color
+            new_img[_y, left_edge__y_:left_edge[_y], :] = fl(np.arange(left_edge__y_, left_edge[_y])).clip(0,
+                                                                                     255)
+            new_img[_y, right_edge[_y]:right_edge__y_, :] = fr(
+                np.arange(right_edge[_y], right_edge__y_)).clip(0, 255)
+            new_img[_y, :left_edge__y_, :] = avg_color
+            new_img[_y, right_edge__y_:, :] = avg_color
     for _y in range(new_img.shape[0] - 1):
         for _x in reversed(range(0, left_edge[_y])):
             new_img[_y, _x] = 0.33 * new_img[_y - 1, _x] + 0.34 * new_img[_y, _x + 1] + 0.33 * new_img[
@@ -309,20 +328,24 @@ def image_expansion_execute(img_BGR):
             k = 4
             up_edge[_x] = np.min(t) + k
             down_edge[_x] = np.max(t) - k
+            # up_edge__x_ = up_edge[_x] // 2
+            # down_edge__x_ = (new_img.shape[0] + down_edge[_x]) // 2
+            up_edge__x_ = max(0, up_edge[_x] - 30)
+            down_edge__x_ = min(new_img.shape[0], down_edge[_x] + 30)
             k = 1
             kind = "slinear"
-            x_fit = np.concatenate(([up_edge[_x] // 2], np.arange(up_edge[_x], up_edge[_x] + k)), 0)
+            x_fit = np.concatenate(([up_edge__x_], np.arange(up_edge[_x], up_edge[_x] + k)), 0)
             y_fit = np.concatenate((avg_color.reshape(1, 3), new_img[up_edge[_x]:up_edge[_x] + k, _x, :]), 0)
             fl = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
             x_fit = np.concatenate(
-                ([(new_img.shape[1] + down_edge[_x]) // 2], np.arange(down_edge[_x] - k, down_edge[_x])), 0)
+                ([down_edge__x_], np.arange(down_edge[_x] - k, down_edge[_x])), 0)
             y_fit = np.concatenate((avg_color.reshape(1, 3), new_img[down_edge[_x] - k: down_edge[_x], _x, :]), 0)
             fr = interpolate.interp1d(x_fit, y_fit, kind=kind, axis=0, fill_value="extrapolate")
-            new_img[up_edge[_x] // 2:up_edge[_x], _x, :] = fl(np.arange(up_edge[_x] // 2, up_edge[_x])).clip(0, 255)
-            new_img[down_edge[_x]:(new_img.shape[0] + down_edge[_y]) // 2, _x, :] = fr(
-                np.arange(down_edge[_x], (new_img.shape[0] + down_edge[_y]) // 2)).clip(0, 255)
-            new_img[:up_edge[_x] // 2, _x, :] = avg_color
-            new_img[(new_img.shape[0] + down_edge[_x]) // 2:, _x, :] = avg_color
+            new_img[up_edge__x_:up_edge[_x], _x, :] = fl(np.arange(up_edge__x_, up_edge[_x])).clip(0, 255)
+            new_img[down_edge[_x]:down_edge__x_, _x, :] = fr(
+                np.arange(down_edge[_x], down_edge__x_)).clip(0, 255)
+            new_img[:up_edge__x_, _x, :] = avg_color
+            new_img[down_edge__x_:, _x, :] = avg_color
     for _x in range(new_img.shape[1] - 1):
         for _y in reversed(range(0, up_edge[_x])):
             new_img[_y, _x] = 0.33 * new_img[_y, _x - 1] + 0.34 * new_img[_y + 1, _x] + 0.33 * new_img[
@@ -339,7 +362,7 @@ def image_expansion_execute(img_BGR):
 """Call Blender"""
 
 
-def blender_wrapper(blender_file, script_file_path, input_data, texture, hair, mask, output, gen_hair, background=True):
+def blender_wrapper(blender_file, script_file_path, input_data, texture, hair, mask, output, gen_hair, hair_color, background=True):
     # LOAD CONFIG FILE
     configManager = ConfigManager('.\\config.ini')
     keyAndValue = {}
@@ -349,6 +372,7 @@ def blender_wrapper(blender_file, script_file_path, input_data, texture, hair, m
     keyAndValue['MASK_DATA'] = mask
     keyAndValue['OUT_DATA'] = output
     keyAndValue['HAIR'] = gen_hair
+    keyAndValue['HAIR_COLOR'] = hair_color if gen_hair else [0, 0, 0]
     configManager.addPairs(keyAndValue)
     # SAVE CONFIG FILE
 
@@ -415,12 +439,11 @@ def time_it_wrapper(callback, name="", args=(), kwargs={}):
     return temp
 
 
-def main(img_path = None):
+def main(img_path = None, hair_data=None):
     """
     Main
     :return:
     """
-    """Ask for input"""
     global_start = time()
     """Import constants from config file"""
     configManager = ConfigManager('.\\config.ini')
@@ -435,6 +458,7 @@ def main(img_path = None):
     MASK_DATA = json_data["MASK_DATA"]
     OUT_DATA = json_data["OUT_DATA"]
     HAIR = json_data["HAIR"]
+    HAIR_COLOR = json_data.get('HAIR_COLOR', [0, 0, 0])
     BLENDER_BACKGROUND = json_data["BLENDER_BACKGROUND"]
 
     if img_path is not None:
@@ -444,6 +468,11 @@ def main(img_path = None):
         OUT_DATA = json_data["OUT_DATA"] = "{}.obj".format(img_path[:-4])
         configManager.addPairs(json_data)
         assert os.path.exists(os.path.join(DIR_INPUT, img_path))
+
+    if hair_data is not None:
+        HAIR_DATA = json_data["HAIR_DATA"] = hair_data
+        configManager.addPairs(json_data)
+
 
     """Setup"""
     warnings.filterwarnings("ignore")
@@ -462,9 +491,10 @@ def main(img_path = None):
                     kwargs={'isMask': False})
     """Texture"""
     time_it_wrapper(genText, "Generating Texture", args=(
-        os.path.join(DIR_MASK, "{}_texture_2.png".format(MASK_DATA[:-4])),
-        os.path.join(DIR_TEXTURE, TEXTURE_DATA),
-        os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])),
+        os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])), # input full
+        os.path.join(DIR_MASK, "{}_texture_2.png".format(MASK_DATA[:-4])), # input half
+        os.path.join(DIR_TEXTURE, TEXTURE_DATA), # output texture for head
+        os.path.join(DIR_MASK, "{}_texture.png".format(MASK_DATA[:-4])), # output texture for mask
         (512, 512, 3)
     ))
     """Alignment"""
@@ -476,12 +506,27 @@ def main(img_path = None):
         HAIR_DATA,
         MASK_DATA,
         OUT_DATA,
-        HAIR,
-        BLENDER_BACKGROUND))
+        True,
+        HAIR_COLOR,
+        False))
     print("Output to: {}".format(os.path.join(os.getcwd(), DIR_OUT, OUT_DATA)))
     print("Total_time: {:.2f}".format(time() - global_start))
     return
 
+def test_texture(img_path_full, img_path_half):
+    """Import constants from config file"""
+    img_full = cv2.imread(img_path_full)
+    img_half = cv2.imread(img_path_half)
+    img = process_copy(img_full, img_half)
+    size = (512, 512, 3)
+    new_img = np.zeros(size, dtype=np.uint8)
+    internal = (
+        (size[0] * 3 // 5 - img.shape[0] // 2), (size[0] * 3 // 5 + img.shape[0] // 2), (size[1] - img.shape[1]) // 2,
+        (size[1] + img_full.shape[1]) // 2)
+    new_img[internal[0]:internal[1], internal[2]:internal[3], :] = img
+    img = image_expansion_execute(new_img)
+    img_mask = img[internal[0]:internal[1], internal[2]:internal[3], :].copy()
 
 if __name__ == '__main__':
-    main('0.jpg')
+    main('orbo.jpg', "strands00357.data")
+    test_texture("Data/mask/orbo_texture_3.png", "Data/mask/orbo_texture_2.png")
